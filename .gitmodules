@@ -1,6 +1,7 @@
 [submodule "open-instruct"]
 	path = open-instruct
 	url = https://github.com/MohdElgaar/open-instruct.git
+	branch = mohdelgaar
 [submodule "IFBench"]
 	path = IFBench
 	url = https://github.com/allenai/IFBench
