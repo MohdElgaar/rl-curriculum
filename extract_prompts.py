@@ -7,10 +7,10 @@ prompts = []
 
 for example in dataset:
     text = example["messages"][0]["content"]
-    contraints = example["constraint"].split('\t')
+    constraints = example["constraint"].split('\t')
     stripped_text = text
-    for contraint in contraints:
-        stripped_text = stripped_text.replace(contraint, "")
+    for constraint in constraints:
+        stripped_text = stripped_text.replace(constraint, "")
     stripped_text = stripped_text.strip()
     prompts.append(stripped_text)
 
