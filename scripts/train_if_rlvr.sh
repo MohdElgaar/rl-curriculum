@@ -116,7 +116,7 @@ python -m open_instruct.grpo_fast \
     --num_samples_per_prompt_rollout ${NUM_SAMPLES_PER_PROMPT} \
     --kl_estimator kl3 \
     --learning_rate ${LEARNING_RATE} \
-    --dataset_local_cache_dir /data/mohamed/data/open-instruct/ \
+    --dataset_local_cache_dir "${DATASET_LOCAL_CACHE_DIR}" \
     --dataset_mixer_list ${TRAIN_DATASET} ${TRAIN_DATASET_FRACTION} \
     --dataset_mixer_list_splits ${TRAIN_SPLIT} \
     --dataset_mixer_eval_list ${EVAL_DATASET} 16 \

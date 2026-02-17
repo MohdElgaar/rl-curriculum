@@ -15,6 +15,10 @@ echo "Setting up IF-RLVR Training Environment"
 echo "============================================"
 echo ""
 
+# Determine the script directory and project root
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+
 # ============================================================================
 # Check Prerequisites
 # ============================================================================
@@ -79,7 +83,13 @@ echo ""
 # ============================================================================
 
 echo "Installing open-instruct dependencies..."
-cd /home/mohamed/rl_curriculum/open-instruct
+if [ ! -d "${PROJECT_ROOT}/open-instruct" ]; then
+    echo "✗ open-instruct directory not found!"
+    echo "Expected: ${PROJECT_ROOT}/open-instruct"
+    exit 1
+fi
+
+cd "${PROJECT_ROOT}/open-instruct"
 
 echo "This may take several minutes on first run..."
 uv sync
@@ -151,8 +161,8 @@ echo ""
 # ============================================================================
 
 echo "Creating output directories..."
-mkdir -p /home/mohamed/rl_curriculum/outputs
-mkdir -p /home/mohamed/rl_curriculum/configs
+mkdir -p "${PROJECT_ROOT}/outputs"
+mkdir -p "${PROJECT_ROOT}/configs"
 
 echo "✓ Output directories created"
 
@@ -173,11 +183,11 @@ echo "   export HF_TOKEN='your_huggingface_token'"
 echo "   export WANDB_API_KEY='your_wandb_key'"
 echo ""
 echo "2. Test with single GPU:"
-echo "   cd /home/mohamed/rl_curriculum/open-instruct"
+echo "   cd ${PROJECT_ROOT}/open-instruct"
 echo "   bash ../scripts/train_if_rlvr_single_gpu.sh"
 echo ""
 echo "3. Run full training:"
-echo "   cd /home/mohamed/rl_curriculum/open-instruct"
+echo "   cd ${PROJECT_ROOT}/open-instruct"
 echo "   bash ../scripts/train_if_rlvr.sh"
 echo ""
 echo "See README.md for more details."
