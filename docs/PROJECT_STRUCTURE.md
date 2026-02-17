@@ -179,10 +179,14 @@ export EXP_NAME="my_experiment"
 bash scripts/train_if_rlvr.sh
 
 # OR using config file
-cp configs/training_config_template.sh configs/my_config.sh
+cp configs/training_config.sh configs/my_config.sh
 # Edit my_config.sh with your settings
 source configs/my_config.sh
 bash scripts/train_if_rlvr.sh
+
+# OR submit with Slurm (uses the same sourced config)
+source configs/my_config.sh
+sbatch scripts/slurm/if_rlvr_a100_8.sbatch
 ```
 
 ## 📊 Output Structure
