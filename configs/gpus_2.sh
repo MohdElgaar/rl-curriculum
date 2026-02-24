@@ -1,14 +1,4 @@
 #!/bin/bash
-#
-# GPU config: 2 GPUs
-# Usage:
-#   source configs/gpus_2.sh
-#
-# This file defines hardware-related settings only.
-
-# ============================================================================
-# Hardware Configuration
-# ============================================================================
 
 # Number of GPUs to use
 export NUM_GPUS=2

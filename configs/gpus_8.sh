@@ -1,15 +1,4 @@
 #!/bin/bash
-#
-# GPU config: 8 GPUs
-# Usage:
-#   source configs/gpus_8.sh
-#
-# This file defines hardware-related settings only.
-
-# ============================================================================
-# Hardware Configuration
-# ============================================================================
-
 # Number of GPUs to use
 export NUM_GPUS=8
 

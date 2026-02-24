@@ -1,14 +1,4 @@
 #!/bin/bash
-#
-# GPU config: 11 GPUs
-# Usage:
-#   source configs/gpus_11.sh
-#
-# This file defines hardware-related settings only.
-
-# ============================================================================
-# Hardware Configuration
-# ============================================================================
 
 # Number of GPUs to use
 export NUM_GPUS=11
