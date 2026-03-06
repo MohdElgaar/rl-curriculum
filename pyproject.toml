@@ -5,7 +5,11 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "open-instruct"
+    "emoji>=2.15.0",
+    "open-instruct",
+    "pip>=26.0.1",
+    "spacy>=3.8.11",
+    "syllapy>=0.7.2",
 ]
 
 [tool.uv.workspace]
