@@ -1,2 +1,6 @@
 wandb/
 logs/
+
+# SSH credentials (never commit private keys)
+cursor_ssh_key
+cursor_ssh_key.pub
