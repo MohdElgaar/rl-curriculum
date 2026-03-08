@@ -15,5 +15,8 @@ dependencies = [
 [tool.uv.workspace]
 members = ["open-instruct"]
 
+[tool.uv]
+override-dependencies = ["transformers>=5.2"]
+
 [tool.uv.sources]
 open-instruct = { workspace = true }
