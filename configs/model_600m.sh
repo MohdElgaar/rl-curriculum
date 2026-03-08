@@ -25,16 +25,6 @@ export TRAIN_DATASET="allenai/IF_multi_constraints_upto5"
 export TRAIN_DATASET_FRACTION="1.0"
 
 # ============================================================================
-# Scratch / Cache / Output Configuration
-# ============================================================================
-
-export DATASET_LOCAL_CACHE_DIR="/data/mohamed/data/open-instruct"
-
-# export SCRATCH_ROOT="/scratch4/workspace/mohamed_elgaar_student_uml_edu-rl-curriculum"
-# export HF_HOME="${SCRATCH_ROOT}/cache/huggingface"
-# export DATASET_LOCAL_CACHE_DIR="${SCRATCH_ROOT}/data/open-instruct"
-
-# ============================================================================
 # Training Hyperparameters
 # ============================================================================
 
@@ -121,12 +111,3 @@ export GROUND_TRUTHS_KEY="ground_truth"
 DATASET_BASENAME=$(basename "${TRAIN_DATASET}" .jsonl)
 MODEL_BASENAME=$(basename "${MODEL_NAME}")
 export EXP_NAME="${MODEL_BASENAME}_${DATASET_BASENAME}_${LEARNING_RATE}"  # Name for this experiment run
-
-# ============================================================================
-# Output Configuration
-# ============================================================================
-
-# Output directory for checkpoints and logs
-export OUTPUT_DIR="/data/mohamed/checkpoints/rl_curriculum/${EXP_NAME}"
-
-# export OUTPUT_DIR="${SCRATCH_ROOT}/outputs/${EXP_NAME}"
