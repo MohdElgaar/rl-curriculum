@@ -10,6 +10,7 @@ dependencies = [
     "pip>=26.0.1",
     "spacy>=3.8.11",
     "syllapy>=0.7.2",
+    "torchvision"
 ]
 
 [tool.uv.workspace]
@@ -20,3 +21,18 @@ override-dependencies = ["transformers>=5.2"]
 
 [tool.uv.sources]
 open-instruct = { workspace = true }
+torchvision = [
+    { index = "pytorch-cu130", marker = "platform_system == 'Linux' and platform_machine != 'aarch64'" },
+    { index = "pytorch-cu130", marker = "platform_system == 'Linux' and platform_machine == 'aarch64'" },
+]
+
+[tool.uv.extra-build-dependencies]
+flash-attn = [{ requirement = "torch", match-runtime = true }]
+
+[tool.uv.extra-build-variables]
+flash-attn = { FLASH_ATTENTION_SKIP_CUDA_BUILD = "TRUE" }
+
+[[tool.uv.index]]
+name = "pytorch-cu130"
+url = "https://download.pytorch.org/whl/cu130"
+explicit = true
