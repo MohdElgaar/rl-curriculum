@@ -12,7 +12,7 @@
 # ============================================================================
 
 # Base model to fine-tune
-export MODEL_NAME="Qwen/Qwen3-1.7B"
+export MODEL_NAME="Qwen/Qwen3-0.6B"
 
 # ============================================================================
 # Dataset Configuration
@@ -30,7 +30,7 @@ export TRAIN_DATASET_FRACTION="1.0"
 
 # Learning rate
 # Typical range: 1e-7 to 1e-6 for RLVR
-export LEARNING_RATE=3e-7
+export LEARNING_RATE=5e-7
 
 # KL divergence coefficient (beta)
 # Higher = stay closer to reference policy
@@ -48,7 +48,7 @@ export TEMPERATURE=1.0
 
 # Number of steps ahead to generate responses
 # Higher = more context for generation
-export ASYNC_STEPS=2
+export ASYNC_STEPS=1
 
 # ============================================================================
 # Batch Configuration
@@ -110,4 +110,4 @@ export GROUND_TRUTHS_KEY="ground_truth"
 # Extract dataset name from path and create experiment name
 DATASET_BASENAME=$(basename "${TRAIN_DATASET}" .jsonl)
 MODEL_BASENAME=$(basename "${MODEL_NAME}")
-export EXP_NAME="${MODEL_BASENAME}_${DATASET_BASENAME}_${LEARNING_RATE}_test"  # Name for this experiment run
+export EXP_NAME="${MODEL_BASENAME}_${DATASET_BASENAME}_${LEARNING_RATE}"  # Name for this experiment run

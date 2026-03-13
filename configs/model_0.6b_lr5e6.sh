@@ -30,7 +30,7 @@ export TRAIN_DATASET_FRACTION="1.0"
 
 # Learning rate
 # Typical range: 1e-7 to 1e-6 for RLVR
-export LEARNING_RATE=3e-7
+export LEARNING_RATE=5e-6
 
 # KL divergence coefficient (beta)
 # Higher = stay closer to reference policy
@@ -56,7 +56,7 @@ export ASYNC_STEPS=1
 
 # Batch size per device
 # Usually 1 for large models
-export PER_DEVICE_BATCH_SIZE=4
+export PER_DEVICE_BATCH_SIZE=12
 
 # Number of unique prompts per rollout
 # Total samples per batch = NUM_UNIQUE_PROMPTS × NUM_SAMPLES_PER_PROMPT

@@ -1,12 +1,11 @@
 #!/bin/bash
 
 # Number of GPUs to use
-export NUM_GPUS=6
+export NUM_GPUS=12
 
 # Number of learner processes per node
-export NUM_LEARNERS_PER_NODE=4
+export NUM_LEARNERS_PER_NODE=8
 
 # Number of vLLM inference engines
 # More engines = faster generation but more memory
-export VLLM_NUM_ENGINES=2
-export VLLM_TP=1
+export VLLM_NUM_ENGINES=4
