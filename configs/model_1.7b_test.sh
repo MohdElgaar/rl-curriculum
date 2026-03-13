@@ -37,10 +37,13 @@ export LEARNING_RATE=3e-7
 # Typical range: 0.001 to 0.1
 export BETA=0.01
 
-# Total training episodes
+# Total training episodes (768000 = 1000 steps with 48×16 batch)
 # Full training: 2000000
 # Quick test: 10000-100000
 export TOTAL_EPISODES=768000
+
+# Number of training steps (768000 episodes = 1000 steps)
+export NUM_TRAINING_STEPS=1000
 
 # Sampling temperature
 # Higher = more diverse generations
@@ -91,7 +94,7 @@ export SEED=1
 
 # Save checkpoint every N episodes
 export SAVE_FREQ=-1
-export CHECKPOINT_STATE_FREQ=25
+export CHECKPOINT_STATE_FREQ=1
 
 # Run local evaluation every N episodes
 export LOCAL_EVAL_EVERY=10
