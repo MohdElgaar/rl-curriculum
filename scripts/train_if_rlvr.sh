@@ -72,6 +72,8 @@ VLLM_NUM_ENGINES="${VLLM_NUM_ENGINES:-10}"
 LEARNING_RATE="${LEARNING_RATE:-5e-7}"
 BETA="${BETA:-0.01}"
 TOTAL_EPISODES="${TOTAL_EPISODES:-2000000}"
+# 768000 episodes = 1000 steps (48 unique prompts × 16 samples per prompt)
+NUM_TRAINING_STEPS="${NUM_TRAINING_STEPS:-2604}"
 TEMPERATURE="${TEMPERATURE:-1.0}"
 ASYNC_STEPS="${ASYNC_STEPS:-1}"
 
@@ -93,7 +95,8 @@ LOCAL_EVAL_EVERY="${LOCAL_EVAL_EVERY:-25}"
 CHECKPOINT_STATE_FREQ="${CHECKPOINT_STATE_FREQ:-25}"
 
 # Output directory
-OUTPUT_DIR="${OUTPUT_DIR:-../outputs/${EXP_NAME}}"
+OUTPUT_DIR="${OUTPUT_DIR:-outputs}"
+OUTPUT_DIR="${OUTPUT_DIR}/${EXP_NAME}"
 CHECKPOINT_STATE_DIR="${OUTPUT_DIR}"
 
 # vLLM configuration
@@ -144,7 +147,8 @@ echo "Starting training..."
 echo "Project root: ${PROJECT_ROOT}"
 echo ""
 
-python -m open_instruct.grpo_fast \
+export RAY_ENABLE_UV_RUN_RUNTIME_ENV=0
+uv run python -m open_instruct.grpo_fast \
     --exp_name "${EXP_NAME}" \
     --beta ${BETA} \
     --num_unique_prompts_rollout ${NUM_UNIQUE_PROMPTS} \
@@ -165,6 +169,7 @@ python -m open_instruct.grpo_fast \
     --non_stop_penalty_value 0.0 \
     --temperature ${TEMPERATURE} \
     --total_episodes ${TOTAL_EPISODES} \
+    --num_training_steps ${NUM_TRAINING_STEPS} \
     --deepspeed_stage 2 \
     --per_device_train_batch_size ${PER_DEVICE_BATCH_SIZE} \
     --num_mini_batches ${NUM_MINI_BATCHES} \
