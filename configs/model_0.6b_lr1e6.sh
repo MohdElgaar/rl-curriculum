@@ -30,11 +30,7 @@ export TRAIN_DATASET_FRACTION="1.0"
 
 # Learning rate
 # Typical range: 1e-7 to 1e-6 for RLVR
-<<<<<<<< HEAD:configs/model_0.6b_lr1e6.sh
 export LEARNING_RATE=1e-6
-========
-export LEARNING_RATE=1e-5
->>>>>>>> 5e94db4 (configs):configs/model_0.6b_lr1e5.sh
 
 # KL divergence coefficient (beta)
 # Higher = stay closer to reference policy
