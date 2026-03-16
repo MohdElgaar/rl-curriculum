@@ -37,6 +37,7 @@ PROMPT_ARG_INSTRUCTION_IDS = {
 # Instructions to ignore (e.g., rephrase that need complex construction).
 IGNORE_INSTRUCTION_IDS = {
     "detectable_format:rephrase",  # RephraseChecker
+    "keywords:exclude_word_harder",  # ExcludeWordHarderChecker needs instruction arg
 }
 
 
