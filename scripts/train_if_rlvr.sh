@@ -25,6 +25,10 @@ resolve_config_path() {
     echo "${PROJECT_ROOT}/${candidate}"
     return 0
   fi
+  if [ -f "${PROJECT_ROOT}/configs/${candidate}" ]; then
+    echo "${PROJECT_ROOT}/configs/${candidate}"
+    return 0
+  fi
   return 1
 }
 
@@ -93,6 +97,7 @@ SEED="${SEED:-1}"
 SAVE_FREQ="${SAVE_FREQ:-10}"
 LOCAL_EVAL_EVERY="${LOCAL_EVAL_EVERY:-25}"
 CHECKPOINT_STATE_FREQ="${CHECKPOINT_STATE_FREQ:-25}"
+IFEVAL_REWARD_SHAPING="${IFEVAL_REWARD_SHAPING:-False}"
 
 # Output directory
 OUTPUT_DIR="${OUTPUT_DIR:-outputs}"
@@ -115,6 +120,7 @@ echo "Experiment: ${EXP_NAME}"
 echo "Model: ${MODEL_NAME}"
 echo "Dataset: ${TRAIN_DATASET}"
 echo "GPUs: ${NUM_GPUS}"
+echo "IFEval reward shaping: ${IFEVAL_REWARD_SHAPING}"
 echo "Output: ${OUTPUT_DIR}"
 echo "============================================"
 echo ""
@@ -170,6 +176,7 @@ uv run python -m open_instruct.grpo_fast \
     --temperature ${TEMPERATURE} \
     --total_episodes ${TOTAL_EPISODES} \
     --num_training_steps ${NUM_TRAINING_STEPS} \
+    --ifeval_reward_shaping ${IFEVAL_REWARD_SHAPING} \
     --deepspeed_stage 2 \
     --per_device_train_batch_size ${PER_DEVICE_BATCH_SIZE} \
     --num_mini_batches ${NUM_MINI_BATCHES} \
