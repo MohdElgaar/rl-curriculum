@@ -36,7 +36,7 @@ export ASYNC_STEPS=1
 # Batch Configuration
 # ============================================================================
 
-export PER_DEVICE_BATCH_SIZE=2
+export PER_DEVICE_BATCH_SIZE=1
 export NUM_UNIQUE_PROMPTS=48
 export NUM_SAMPLES_PER_PROMPT=16
 export NUM_MINI_BATCHES=2
@@ -64,6 +64,10 @@ export LOCAL_EVAL_EVERY=10
 
 export GROUND_TRUTHS_KEY="ground_truth"
 export IFEVAL_REWARD_SHAPING=True
+export IFEVAL_REWARD_SHAPING_CURRICULUM=True
+export IFEVAL_COMPETENCE_C0=0.1
+export IFEVAL_COMPETENCE_ALPHA=10.0
+export IFEVAL_NUM_CURRICULUM_STEPS=200
 
 # ============================================================================
 # Experiment Identification

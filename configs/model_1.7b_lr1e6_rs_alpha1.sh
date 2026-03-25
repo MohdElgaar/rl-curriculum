@@ -64,6 +64,10 @@ export LOCAL_EVAL_EVERY=10
 
 export GROUND_TRUTHS_KEY="ground_truth"
 export IFEVAL_REWARD_SHAPING=True
+export IFEVAL_REWARD_SHAPING_CURRICULUM=True
+export IFEVAL_COMPETENCE_C0=0.1
+export IFEVAL_COMPETENCE_ALPHA=1.0
+export IFEVAL_NUM_CURRICULUM_STEPS=200
 
 # ============================================================================
 # Experiment Identification

@@ -98,6 +98,10 @@ SAVE_FREQ="${SAVE_FREQ:-10}"
 LOCAL_EVAL_EVERY="${LOCAL_EVAL_EVERY:-25}"
 CHECKPOINT_STATE_FREQ="${CHECKPOINT_STATE_FREQ:-25}"
 IFEVAL_REWARD_SHAPING="${IFEVAL_REWARD_SHAPING:-False}"
+IFEVAL_REWARD_SHAPING_CURRICULUM="${IFEVAL_REWARD_SHAPING_CURRICULUM:-False}"
+IFEVAL_COMPETENCE_C0="${IFEVAL_COMPETENCE_C0:-0.1}"
+IFEVAL_COMPETENCE_ALPHA="${IFEVAL_COMPETENCE_ALPHA:-1.0}"
+IFEVAL_NUM_CURRICULUM_STEPS="${IFEVAL_NUM_CURRICULUM_STEPS:--1}"
 
 # Output directory
 OUTPUT_DIR="${OUTPUT_DIR:-outputs}"
@@ -121,6 +125,7 @@ echo "Model: ${MODEL_NAME}"
 echo "Dataset: ${TRAIN_DATASET}"
 echo "GPUs: ${NUM_GPUS}"
 echo "IFEval reward shaping: ${IFEVAL_REWARD_SHAPING}"
+echo "IFEval shaping curriculum: ${IFEVAL_REWARD_SHAPING_CURRICULUM} (c0=${IFEVAL_COMPETENCE_C0}, alpha=${IFEVAL_COMPETENCE_ALPHA}), num curriculum steps=${IFEVAL_NUM_CURRICULUM_STEPS}"
 echo "Output: ${OUTPUT_DIR}"
 echo "============================================"
 echo ""
@@ -177,6 +182,10 @@ uv run python -m open_instruct.grpo_fast \
     --total_episodes ${TOTAL_EPISODES} \
     --num_training_steps ${NUM_TRAINING_STEPS} \
     --ifeval_reward_shaping ${IFEVAL_REWARD_SHAPING} \
+    --ifeval_reward_shaping_curriculum ${IFEVAL_REWARD_SHAPING_CURRICULUM} \
+    --ifeval_competence_c0 ${IFEVAL_COMPETENCE_C0} \
+    --ifeval_competence_alpha ${IFEVAL_COMPETENCE_ALPHA} \
+    --ifeval_num_curriculum_steps ${IFEVAL_NUM_CURRICULUM_STEPS} \
     --deepspeed_stage 2 \
     --per_device_train_batch_size ${PER_DEVICE_BATCH_SIZE} \
     --num_mini_batches ${NUM_MINI_BATCHES} \
