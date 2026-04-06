@@ -56,6 +56,7 @@ export PACK_LENGTH=4096
 export SEED=1
 export SAVE_FREQ=-1
 export CHECKPOINT_STATE_FREQ=25
+export KEEP_LAST_N_CHECKPOINTS=-1
 export LOCAL_EVAL_EVERY=10
 
 # ============================================================================

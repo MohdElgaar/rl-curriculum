@@ -30,12 +30,12 @@ export TRAIN_DATASET_FRACTION="1.0"
 
 # Learning rate
 # Typical range: 1e-7 to 1e-6 for RLVR
-export LEARNING_RATE=1e-5
+export LEARNING_RATE=1e-6
 
 # KL divergence coefficient (beta)
 # Higher = stay closer to reference policy
 # Typical range: 0.001 to 0.1
-export BETA=0.1
+export BETA=0.01
 
 # Total training episodes (768000 = 1000 steps with 48×16 batch)
 # Full training: 2000000
@@ -43,7 +43,7 @@ export BETA=0.1
 export TOTAL_EPISODES=768000
 
 # Number of training steps (768000 episodes = 1000 steps)
-export NUM_TRAINING_STEPS=500
+export NUM_TRAINING_STEPS=1000
 
 # Sampling temperature
 # Higher = more diverse generations
@@ -59,7 +59,7 @@ export ASYNC_STEPS=1
 
 # Batch size per device
 # Usually 1 for large models
-export PER_DEVICE_BATCH_SIZE=1
+export PER_DEVICE_BATCH_SIZE=8
 
 # Number of unique prompts per rollout
 # Total samples per batch = NUM_UNIQUE_PROMPTS × NUM_SAMPLES_PER_PROMPT
@@ -90,7 +90,7 @@ export PACK_LENGTH=4096
 # ============================================================================
 
 # Random seed for reproducibility
-export SEED=1
+export SEED=2
 
 # Save checkpoint every N episodes
 export SAVE_FREQ=-1
@@ -114,4 +114,4 @@ export GROUND_TRUTHS_KEY="ground_truth"
 # Extract dataset name from path and create experiment name
 DATASET_BASENAME=$(basename "${TRAIN_DATASET}" .jsonl)
 MODEL_BASENAME=$(basename "${MODEL_NAME}")
-export EXP_NAME="${MODEL_BASENAME}_${DATASET_BASENAME}_${LEARNING_RATE}_${BETA}"  # Name for this experiment run
+export EXP_NAME="${MODEL_BASENAME}_${DATASET_BASENAME}_${LEARNING_RATE}_seed${SEED}"  # separate OUTPUT_DIR per seed
