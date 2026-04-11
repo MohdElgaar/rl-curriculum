@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=if-rlvr
 #SBATCH --partition=gpu,gpu-preempt
-#SBATCH --gpus=8
+#SBATCH --gpus=6
 #SBATCH --constraint="mpi&a100-80g"
 #SBATCH --cpus-per-gpu=10
 #SBATCH --mem=100G
