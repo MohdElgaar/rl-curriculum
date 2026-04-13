@@ -103,6 +103,18 @@ IFEVAL_COMPETENCE_C0="${IFEVAL_COMPETENCE_C0:-0.1}"
 IFEVAL_COMPETENCE_ALPHA="${IFEVAL_COMPETENCE_ALPHA:-1.0}"
 IFEVAL_NUM_CURRICULUM_STEPS="${IFEVAL_NUM_CURRICULUM_STEPS:--1}"
 
+MATH_REWARD_SHAPING="${MATH_REWARD_SHAPING:-False}"
+MATH_REWARD_SHAPING_CURRICULUM="${MATH_REWARD_SHAPING_CURRICULUM:-False}"
+MATH_COMPETENCE_C0="${MATH_COMPETENCE_C0:-0.1}"
+MATH_COMPETENCE_ALPHA="${MATH_COMPETENCE_ALPHA:-1.0}"
+MATH_NUM_CURRICULUM_STEPS="${MATH_NUM_CURRICULUM_STEPS:--1}"
+
+GSM_REWARD_SHAPING="${GSM_REWARD_SHAPING:-False}"
+GSM_REWARD_SHAPING_CURRICULUM="${GSM_REWARD_SHAPING_CURRICULUM:-False}"
+GSM_COMPETENCE_C0="${GSM_COMPETENCE_C0:-0.1}"
+GSM_COMPETENCE_ALPHA="${GSM_COMPETENCE_ALPHA:-1.0}"
+GSM_NUM_CURRICULUM_STEPS="${GSM_NUM_CURRICULUM_STEPS:--1}"
+
 # Output directory
 OUTPUT_DIR="${OUTPUT_DIR:-outputs}"
 OUTPUT_DIR="${OUTPUT_DIR}/${EXP_NAME}"
@@ -126,6 +138,8 @@ echo "Dataset: ${TRAIN_DATASET}"
 echo "GPUs: ${NUM_GPUS}"
 echo "IFEval reward shaping: ${IFEVAL_REWARD_SHAPING}"
 echo "IFEval shaping curriculum: ${IFEVAL_REWARD_SHAPING_CURRICULUM} (c0=${IFEVAL_COMPETENCE_C0}, alpha=${IFEVAL_COMPETENCE_ALPHA}), num curriculum steps=${IFEVAL_NUM_CURRICULUM_STEPS}"
+echo "MATH reward shaping: ${MATH_REWARD_SHAPING} (curriculum=${MATH_REWARD_SHAPING_CURRICULUM}, c0=${MATH_COMPETENCE_C0}, alpha=${MATH_COMPETENCE_ALPHA}, steps=${MATH_NUM_CURRICULUM_STEPS})"
+echo "GSM reward shaping: ${GSM_REWARD_SHAPING} (curriculum=${GSM_REWARD_SHAPING_CURRICULUM}, c0=${GSM_COMPETENCE_C0}, alpha=${GSM_COMPETENCE_ALPHA}, steps=${GSM_NUM_CURRICULUM_STEPS})"
 echo "Output: ${OUTPUT_DIR}"
 echo "============================================"
 echo ""
@@ -186,6 +200,16 @@ uv run python -m open_instruct.grpo_fast \
     --ifeval_competence_c0 ${IFEVAL_COMPETENCE_C0} \
     --ifeval_competence_alpha ${IFEVAL_COMPETENCE_ALPHA} \
     --ifeval_num_curriculum_steps ${IFEVAL_NUM_CURRICULUM_STEPS} \
+    --math_reward_shaping ${MATH_REWARD_SHAPING} \
+    --math_reward_shaping_curriculum ${MATH_REWARD_SHAPING_CURRICULUM} \
+    --math_competence_c0 ${MATH_COMPETENCE_C0} \
+    --math_competence_alpha ${MATH_COMPETENCE_ALPHA} \
+    --math_num_curriculum_steps ${MATH_NUM_CURRICULUM_STEPS} \
+    --gsm_reward_shaping ${GSM_REWARD_SHAPING} \
+    --gsm_reward_shaping_curriculum ${GSM_REWARD_SHAPING_CURRICULUM} \
+    --gsm_competence_c0 ${GSM_COMPETENCE_C0} \
+    --gsm_competence_alpha ${GSM_COMPETENCE_ALPHA} \
+    --gsm_num_curriculum_steps ${GSM_NUM_CURRICULUM_STEPS} \
     --deepspeed_stage 2 \
     --per_device_train_batch_size ${PER_DEVICE_BATCH_SIZE} \
     --num_mini_batches ${NUM_MINI_BATCHES} \
