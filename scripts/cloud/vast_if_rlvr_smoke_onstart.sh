@@ -50,8 +50,11 @@ if ! git submodule update --init --depth 1 open-instruct 2>/dev/null; then
   git clone --depth 1 --branch mohdelgaar "${OI_URL}" open-instruct
 fi
 
-log "uv sync"
-uv sync
+log "uv sync (--frozen, fallback --prerelease=allow)"
+if ! uv sync --frozen; then
+  log "Frozen lock install failed; resolving with prerelease allowance (matches local dev when lock drifts)"
+  uv sync --prerelease=allow
+fi
 
 # --- Training env (9B, 6 learners, 2 vLLM engines, lr 5e-7, no shaping) ---
 export MODEL_NAME="Qwen/Qwen3.5-9B"
