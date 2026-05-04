@@ -22,11 +22,18 @@ if ! command -v uv >/dev/null 2>&1; then
 fi
 export PATH="/root/.local/bin:${PATH}"
 
+# Private GitHub repos (rl-curriculum submodule): authenticate HTTPS without printing the token.
+if [ -n "${GH_TOKEN:-}${GITHUB_TOKEN:-}" ]; then
+  _gh_t="${GH_TOKEN:-${GITHUB_TOKEN}}"
+  git config --global url."https://x-access-token:${_gh_t}@github.com/".insteadOf "https://github.com/"
+fi
+
 WORKDIR="${WORKDIR:-/workspace}"
 mkdir -p "${WORKDIR}"
 cd "${WORKDIR}"
 
 RL_REPO_URL="${RL_CURRICULUM_REPO_URL:-https://github.com/MohdElgaar/rl-curriculum.git}"
+# Token-based HTTPS is handled by git insteadOf above when GH_TOKEN is set.
 RL_GIT_REF="${RL_CURRICULUM_GIT_REF:-cursor/if-rlvr-sbatch-gpus-6-default-13c0}"
 
 if [ ! -d rl-curriculum/.git ]; then
