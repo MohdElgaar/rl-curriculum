@@ -43,7 +43,12 @@ fi
 cd rl-curriculum
 
 log "Initializing submodule open-instruct"
-git submodule update --init --depth 1 open-instruct
+if ! git submodule update --init --depth 1 open-instruct 2>/dev/null; then
+  log "Submodule shallow init failed; using fresh shallow clone of mohdelgaar branch"
+  rm -rf open-instruct
+  OI_URL="${OPEN_INSTRUCT_REPO_URL:-https://github.com/MohdElgaar/open-instruct.git}"
+  git clone --depth 1 --branch mohdelgaar "${OI_URL}" open-instruct
+fi
 
 log "uv sync"
 uv sync
