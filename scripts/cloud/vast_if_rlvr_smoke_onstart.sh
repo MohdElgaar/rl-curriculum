@@ -9,18 +9,15 @@ log() { echo "[vast-smoke] $(date -Is) $*"; }
 
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -qq
-apt-get install -y -qq git curl wget ca-certificates software-properties-common
-
-if ! command -v python3.12 >/dev/null 2>&1; then
-  add-apt-repository -y ppa:deadsnakes/ppa
-  apt-get update -qq
-  apt-get install -y -qq python3.12 python3.12-dev python3.12-venv
-fi
+apt-get install -y -qq git curl wget ca-certificates build-essential pkg-config libssl-dev
 
 if ! command -v uv >/dev/null 2>&1; then
   curl -LsSf https://astral.sh/uv/install.sh | sh
 fi
 export PATH="/root/.local/bin:${PATH}"
+
+log "Installing CPython 3.12 via uv (avoids Launchpad PPA flakiness on cloud hosts)"
+uv python install 3.12
 
 # Private GitHub repos (rl-curriculum submodule): authenticate HTTPS without printing the token.
 if [ -n "${GH_TOKEN:-}${GITHUB_TOKEN:-}" ]; then
@@ -51,6 +48,7 @@ if ! git submodule update --init --depth 1 open-instruct 2>/dev/null; then
 fi
 
 log "uv sync (--frozen, fallback --prerelease=allow)"
+export UV_PYTHON=3.12
 if ! uv sync --frozen; then
   log "Frozen lock install failed; resolving with prerelease allowance (matches local dev when lock drifts)"
   uv sync --prerelease=allow
