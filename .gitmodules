@@ -5,3 +5,7 @@
 [submodule "IFBench"]
 	path = IFBench
 	url = https://github.com/allenai/IFBench
+[submodule "lm-evaluation-harness"]
+	path = lm-evaluation-harness
+	url = https://github.com/MohdElgaar/lm-evaluation-harness.git
+	branch = main
