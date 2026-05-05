@@ -36,8 +36,16 @@ RL_GIT_REF="${RL_CURRICULUM_GIT_REF:-cursor/if-rlvr-sbatch-gpus-6-default-13c0}"
 if [ ! -d rl-curriculum/.git ]; then
   log "Cloning ${RL_REPO_URL}@${RL_GIT_REF}"
   git clone --depth 1 --branch "${RL_GIT_REF}" "${RL_REPO_URL}" rl-curriculum
+else
+  log "Fetching latest ${RL_GIT_REF}"
+  git -C rl-curriculum fetch --depth 1 origin "${RL_GIT_REF}" \
+    && git -C rl-curriculum checkout -f FETCH_HEAD \
+    || { log "Fetch failed; re-cloning rl-curriculum"; rm -rf rl-curriculum; git clone --depth 1 --branch "${RL_GIT_REF}" "${RL_REPO_URL}" rl-curriculum; }
 fi
 cd rl-curriculum
+
+# Parent commit may switch submodule gitlink — drop old tree before (re)init.
+rm -rf open-instruct
 
 log "Initializing submodule open-instruct"
 if ! git submodule update --init --depth 1 open-instruct 2>/dev/null; then

@@ -198,7 +198,15 @@ if [ "${EVAL_ON_STEP_0:-True}" = "True" ] || [ "${EVAL_ON_STEP_0:-True}" = "true
     eval_step_args+=(--eval_on_step_0)
 fi
 
-uv run python -m open_instruct.grpo_fast \
+_RL_VENV_ROOT="${PROJECT_ROOT}/${UV_PROJECT_ENVIRONMENT:-.venv}"
+_RL_VENV_PY="${RL_TRAINER_PYTHON:-${_RL_VENV_ROOT}/bin/python}"
+if [[ "${IF_RLVR_USE_UV_RUN:-0}" != "1" && -x "${_RL_VENV_PY}" ]]; then
+  echo "Trainer Python (venv): ${_RL_VENV_PY}"
+  _RUN_PY=("${_RL_VENV_PY}")
+else
+  _RUN_PY=(uv run python)
+fi
+"${_RUN_PY[@]}" -m open_instruct.grpo_fast \
     --exp_name "${EXP_NAME}" \
     --beta ${BETA} \
     --num_unique_prompts_rollout ${NUM_UNIQUE_PROMPTS} \
