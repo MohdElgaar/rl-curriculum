@@ -2,3 +2,5 @@ wandb/
 logs/
 .venv
 *.pyc
+**/cache
+**/figures
