@@ -59,7 +59,8 @@ EXP_NAME="${EXP_NAME:-if_rlvr_tulu3_8b_grpo}"
 
 # Model configuration
 MODEL_NAME="${MODEL_NAME:-allenai/Llama-3.1-Tulu-3-8B-DPO}"
-CHAT_TEMPLATE_NAME="${CHAT_TEMPLATE_NAME:-tulu}"
+# If set, passed through to --chat_template_name (empty = use tokenizer default, e.g. Qwen).
+CHAT_TEMPLATE_NAME="${CHAT_TEMPLATE_NAME:-}"
 
 # Dataset configuration
 TRAIN_DATASET="${TRAIN_DATASET:-allenai/IF_multi_constraints_upto5}"
@@ -97,16 +98,36 @@ SEED="${SEED:-1}"
 SAVE_FREQ="${SAVE_FREQ:-10}"
 LOCAL_EVAL_EVERY="${LOCAL_EVAL_EVERY:-25}"
 CHECKPOINT_STATE_FREQ="${CHECKPOINT_STATE_FREQ:-25}"
+KEEP_LAST_N_CHECKPOINTS="${KEEP_LAST_N_CHECKPOINTS:--1}"
+TRUST_REMOTE_CODE="${TRUST_REMOTE_CODE:-False}"
 IFEVAL_REWARD_SHAPING="${IFEVAL_REWARD_SHAPING:-False}"
 IFEVAL_REWARD_SHAPING_CURRICULUM="${IFEVAL_REWARD_SHAPING_CURRICULUM:-False}"
+IFEVAL_RANDOM_ZERO_REWARD="${IFEVAL_RANDOM_ZERO_REWARD:-False}"
 IFEVAL_COMPETENCE_C0="${IFEVAL_COMPETENCE_C0:-0.1}"
 IFEVAL_COMPETENCE_ALPHA="${IFEVAL_COMPETENCE_ALPHA:-1.0}"
 IFEVAL_NUM_CURRICULUM_STEPS="${IFEVAL_NUM_CURRICULUM_STEPS:--1}"
 
+MATH_REWARD_SHAPING="${MATH_REWARD_SHAPING:-False}"
+MATH_REWARD_SHAPING_CURRICULUM="${MATH_REWARD_SHAPING_CURRICULUM:-False}"
+MATH_RANDOM_ZERO_REWARD="${MATH_RANDOM_ZERO_REWARD:-False}"
+MATH_COMPETENCE_C0="${MATH_COMPETENCE_C0:-0.1}"
+MATH_COMPETENCE_ALPHA="${MATH_COMPETENCE_ALPHA:-1.0}"
+MATH_NUM_CURRICULUM_STEPS="${MATH_NUM_CURRICULUM_STEPS:--1}"
+
+GSM_REWARD_SHAPING="${GSM_REWARD_SHAPING:-False}"
+GSM_REWARD_SHAPING_CURRICULUM="${GSM_REWARD_SHAPING_CURRICULUM:-False}"
+GSM_RANDOM_ZERO_REWARD="${GSM_RANDOM_ZERO_REWARD:-False}"
+GSM_COMPETENCE_C0="${GSM_COMPETENCE_C0:-0.1}"
+GSM_COMPETENCE_ALPHA="${GSM_COMPETENCE_ALPHA:-1.0}"
+GSM_NUM_CURRICULUM_STEPS="${GSM_NUM_CURRICULUM_STEPS:--1}"
+
+# Dataset cache (HF datasets / preprocessing); avoids empty path on fresh envs (e.g. cloud VMs).
+DATASET_LOCAL_CACHE_DIR="${DATASET_LOCAL_CACHE_DIR:-${PROJECT_ROOT}/.dataset_cache}"
+
 # Output directory
 OUTPUT_DIR="${OUTPUT_DIR:-outputs}"
 OUTPUT_DIR="${OUTPUT_DIR}/${EXP_NAME}"
-CHECKPOINT_STATE_DIR="${OUTPUT_DIR}"
+CHECKPOINT_STATE_DIR="${CHECKPOINT_STATE_DIR:-${OUTPUT_DIR}}"
 
 # vLLM configuration
 export VLLM_ALLOW_INSECURE_SERIALIZATION=1
@@ -126,6 +147,9 @@ echo "Dataset: ${TRAIN_DATASET}"
 echo "GPUs: ${NUM_GPUS}"
 echo "IFEval reward shaping: ${IFEVAL_REWARD_SHAPING}"
 echo "IFEval shaping curriculum: ${IFEVAL_REWARD_SHAPING_CURRICULUM} (c0=${IFEVAL_COMPETENCE_C0}, alpha=${IFEVAL_COMPETENCE_ALPHA}), num curriculum steps=${IFEVAL_NUM_CURRICULUM_STEPS}"
+echo "IFEval random-zero reward: ${IFEVAL_RANDOM_ZERO_REWARD}"
+echo "MATH reward shaping: ${MATH_REWARD_SHAPING} (curriculum=${MATH_REWARD_SHAPING_CURRICULUM}, random_zero=${MATH_RANDOM_ZERO_REWARD}, c0=${MATH_COMPETENCE_C0}, alpha=${MATH_COMPETENCE_ALPHA}, steps=${MATH_NUM_CURRICULUM_STEPS})"
+echo "GSM reward shaping: ${GSM_REWARD_SHAPING} (curriculum=${GSM_REWARD_SHAPING_CURRICULUM}, random_zero=${GSM_RANDOM_ZERO_REWARD}, c0=${GSM_COMPETENCE_C0}, alpha=${GSM_COMPETENCE_ALPHA}, steps=${GSM_NUM_CURRICULUM_STEPS})"
 echo "Output: ${OUTPUT_DIR}"
 echo "============================================"
 echo ""
@@ -159,7 +183,30 @@ echo "Project root: ${PROJECT_ROOT}"
 echo ""
 
 export RAY_ENABLE_UV_RUN_RUNTIME_ENV=0
-uv run python -m open_instruct.grpo_fast \
+
+extra_args=()
+if [ -n "${CHAT_TEMPLATE_NAME}" ]; then
+    extra_args+=(--chat_template_name "${CHAT_TEMPLATE_NAME}")
+fi
+if [ -n "${EXTRA_GRPO_ARGS:-}" ]; then
+    read -r -a _extra_grpo_arr <<< "${EXTRA_GRPO_ARGS}"
+    extra_args+=("${_extra_grpo_arr[@]}")
+fi
+
+eval_step_args=()
+if [ "${EVAL_ON_STEP_0:-True}" = "True" ] || [ "${EVAL_ON_STEP_0:-True}" = "true" ]; then
+    eval_step_args+=(--eval_on_step_0)
+fi
+
+_RL_VENV_ROOT="${PROJECT_ROOT}/${UV_PROJECT_ENVIRONMENT:-.venv}"
+_RL_VENV_PY="${RL_TRAINER_PYTHON:-${_RL_VENV_ROOT}/bin/python}"
+if [[ "${IF_RLVR_USE_UV_RUN:-0}" != "1" && -x "${_RL_VENV_PY}" ]]; then
+  echo "Trainer Python (venv): ${_RL_VENV_PY}"
+  _RUN_PY=("${_RL_VENV_PY}")
+else
+  _RUN_PY=(uv run python)
+fi
+"${_RUN_PY[@]}" -m open_instruct.grpo_fast \
     --exp_name "${EXP_NAME}" \
     --beta ${BETA} \
     --num_unique_prompts_rollout ${NUM_UNIQUE_PROMPTS} \
@@ -183,9 +230,22 @@ uv run python -m open_instruct.grpo_fast \
     --num_training_steps ${NUM_TRAINING_STEPS} \
     --ifeval_reward_shaping ${IFEVAL_REWARD_SHAPING} \
     --ifeval_reward_shaping_curriculum ${IFEVAL_REWARD_SHAPING_CURRICULUM} \
+    --ifeval_random_zero_reward ${IFEVAL_RANDOM_ZERO_REWARD} \
     --ifeval_competence_c0 ${IFEVAL_COMPETENCE_C0} \
     --ifeval_competence_alpha ${IFEVAL_COMPETENCE_ALPHA} \
     --ifeval_num_curriculum_steps ${IFEVAL_NUM_CURRICULUM_STEPS} \
+    --math_reward_shaping ${MATH_REWARD_SHAPING} \
+    --math_reward_shaping_curriculum ${MATH_REWARD_SHAPING_CURRICULUM} \
+    --math_random_zero_reward ${MATH_RANDOM_ZERO_REWARD} \
+    --math_competence_c0 ${MATH_COMPETENCE_C0} \
+    --math_competence_alpha ${MATH_COMPETENCE_ALPHA} \
+    --math_num_curriculum_steps ${MATH_NUM_CURRICULUM_STEPS} \
+    --gsm_reward_shaping ${GSM_REWARD_SHAPING} \
+    --gsm_reward_shaping_curriculum ${GSM_REWARD_SHAPING_CURRICULUM} \
+    --gsm_random_zero_reward ${GSM_RANDOM_ZERO_REWARD} \
+    --gsm_competence_c0 ${GSM_COMPETENCE_C0} \
+    --gsm_competence_alpha ${GSM_COMPETENCE_ALPHA} \
+    --gsm_num_curriculum_steps ${GSM_NUM_CURRICULUM_STEPS} \
     --deepspeed_stage 2 \
     --per_device_train_batch_size ${PER_DEVICE_BATCH_SIZE} \
     --num_mini_batches ${NUM_MINI_BATCHES} \
@@ -199,13 +259,16 @@ uv run python -m open_instruct.grpo_fast \
     --save_freq ${SAVE_FREQ} \
     --checkpoint_state_freq ${CHECKPOINT_STATE_FREQ} \
     --checkpoint_state_dir "${CHECKPOINT_STATE_DIR}" \
+    --keep_last_n_checkpoints "${KEEP_LAST_N_CHECKPOINTS}" \
     --async_steps ${ASYNC_STEPS} \
     --gradient_checkpointing \
+    --trust_remote_code "${TRUST_REMOTE_CODE}" \
     --with_tracking \
     --inflight_updates True \
     --code_pass_rate_reward_threshold 0.99 \
-    --eval_on_step_0 \
-    --output_dir "${OUTPUT_DIR}"
+    "${eval_step_args[@]}" \
+    --output_dir "${OUTPUT_DIR}" \
+    "${extra_args[@]}"
 
 echo ""
 echo "============================================"

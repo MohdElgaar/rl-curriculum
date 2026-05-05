@@ -1,0 +1,48 @@
+#!/bin/bash
+# Shared Qwen3-0.6B RLVR math/GSM hyperparameters (seed 1). Source a dataset+regime file after this.
+
+export MODEL_NAME="Qwen/Qwen3-0.6B"
+export TRAIN_SPLIT="train"
+export TRAIN_DATASET_FRACTION="1.0"
+
+export LEARNING_RATE=1e-6
+export BETA=0.01
+export TOTAL_EPISODES=768000
+export NUM_TRAINING_STEPS=1000
+export TEMPERATURE=1.0
+export ASYNC_STEPS=1
+
+export PER_DEVICE_BATCH_SIZE=12
+export NUM_UNIQUE_PROMPTS=48
+export NUM_SAMPLES_PER_PROMPT=16
+export NUM_MINI_BATCHES=2
+
+export MAX_PROMPT_TOKEN_LENGTH=2048
+export RESPONSE_LENGTH=2048
+export PACK_LENGTH=4096
+
+export SEED=1
+export SAVE_FREQ=-1
+export CHECKPOINT_STATE_FREQ=25
+export KEEP_LAST_N_CHECKPOINTS=-1
+export LOCAL_EVAL_EVERY=10
+
+# No IFEval shaping for these runs (train data is MATH or GSM only).
+export IFEVAL_REWARD_SHAPING=False
+export IFEVAL_REWARD_SHAPING_CURRICULUM=False
+export IFEVAL_COMPETENCE_C0=0.1
+export IFEVAL_COMPETENCE_ALPHA=1.0
+export IFEVAL_NUM_CURRICULUM_STEPS=-1
+
+# Defaults; overridden per regime + train dataset.
+export MATH_REWARD_SHAPING=False
+export MATH_REWARD_SHAPING_CURRICULUM=False
+export MATH_COMPETENCE_C0=0.1
+export MATH_COMPETENCE_ALPHA=1.0
+export MATH_NUM_CURRICULUM_STEPS=200
+
+export GSM_REWARD_SHAPING=False
+export GSM_REWARD_SHAPING_CURRICULUM=False
+export GSM_COMPETENCE_C0=0.1
+export GSM_COMPETENCE_ALPHA=1.0
+export GSM_NUM_CURRICULUM_STEPS=200

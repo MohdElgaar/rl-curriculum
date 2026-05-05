@@ -1,11 +1,12 @@
 #!/bin/bash
 #SBATCH --job-name=if-rlvr
 #SBATCH --partition=gpu,gpu-preempt
-#SBATCH --gpus=8
+#SBATCH --gpus=6
 #SBATCH --constraint="mpi&a100-80g"
 #SBATCH --cpus-per-gpu=10
-#SBATCH --mem=32G
+#SBATCH --mem=100G
 #SBATCH --time=48:00:00
+#SBATCH --requeue
 #SBATCH --output=logs/%x-%j.out
 #SBATCH --error=logs/%x-%j.err
 
@@ -13,6 +14,41 @@ set -euo pipefail
 
 log() {
   echo "[if-rlvr] $*"
+}
+
+handle_exit() {
+  local exit_code="$1"
+  local restart_count="${SLURM_RESTART_COUNT:-0}"
+  local max_restarts="${MAX_RESTARTS:-5}"
+  local job_name="${SLURM_JOB_NAME:-if-rlvr}"
+  local log_dir="${PROJECT_ROOT}/logs"
+  local out_log="${log_dir}/${job_name}-${SLURM_JOB_ID}.out"
+  local err_log="${log_dir}/${job_name}-${SLURM_JOB_ID}.err"
+
+  trap - EXIT
+  set +e
+
+  log "Job completed with exit ${exit_code} (restart_count=${restart_count})"
+
+  if [ "${exit_code}" -eq 0 ]; then
+    exit 0
+  fi
+
+  if [ "${restart_count}" -ge "${max_restarts}" ]; then
+    log "Job ${SLURM_JOB_ID} reached max restarts=${max_restarts}; not requeueing"
+    exit "${exit_code}"
+  fi
+
+  [ -f "${out_log}" ] && cp -f -- "${out_log}" "${out_log%.out}_fail_${restart_count}.out"
+  [ -f "${err_log}" ] && cp -f -- "${err_log}" "${err_log%.err}_fail_${restart_count}.err"
+
+  log "Requeuing job ${SLURM_JOB_ID}"
+  if scontrol requeue "${SLURM_JOB_ID}"; then
+    exit 0
+  fi
+
+  log "Failed to requeue job ${SLURM_JOB_ID}"
+  exit "${exit_code}"
 }
 
 setup_log_filters() {
@@ -35,6 +71,7 @@ setup_log_filters
 
 PROJECT_ROOT="${SLURM_SUBMIT_DIR:-$(pwd)}"
 log "Project root: ${PROJECT_ROOT}"
+trap 'handle_exit $?' EXIT
 
 ARCH="$(uname -m)"
 IS_ARM_ARCH=0
@@ -55,6 +92,10 @@ resolve_config_path() {
   fi
   if [ -f "${PROJECT_ROOT}/${candidate}" ]; then
     echo "${PROJECT_ROOT}/${candidate}"
+    return 0
+  fi
+  if [ -f "${PROJECT_ROOT}/configs/${candidate}" ]; then
+    echo "${PROJECT_ROOT}/configs/${candidate}"
     return 0
   fi
   return 1
@@ -128,6 +169,13 @@ OUTPUT_DIR_DEFAULT="${SCRATCH_ROOT}/outputs"
 : "${LOCAL_EVAL_EVERY:=25}"
 : "${SAVE_FREQ:=10}"
 : "${CHECKPOINT_STATE_FREQ:=25}"
+: "${KEEP_LAST_N_CHECKPOINTS:=-1}"
+: "${IFEVAL_REWARD_SHAPING:=False}"
+: "${IFEVAL_REWARD_SHAPING_CURRICULUM:=False}"
+: "${IFEVAL_COMPETENCE_C0:=0.1}"
+: "${IFEVAL_COMPETENCE_ALPHA:=1.0}"
+: "${IFEVAL_NUM_CURRICULUM_STEPS:=-1}"
+
 
 : "${APPLY_VERIFIABLE_REWARD:=True}"
 : "${NON_STOP_PENALTY:=True}"
@@ -259,6 +307,11 @@ run_ray_and_training() {
     --non_stop_penalty_value "${NON_STOP_PENALTY_VALUE}"
     --temperature "${TEMPERATURE}"
     --total_episodes "${TOTAL_EPISODES}"
+    --ifeval_reward_shaping "${IFEVAL_REWARD_SHAPING}"
+    --ifeval_reward_shaping_curriculum "${IFEVAL_REWARD_SHAPING_CURRICULUM}"
+    --ifeval_competence_c0 "${IFEVAL_COMPETENCE_C0}"
+    --ifeval_competence_alpha "${IFEVAL_COMPETENCE_ALPHA}"
+    --ifeval_num_curriculum_steps "${IFEVAL_NUM_CURRICULUM_STEPS}"
     --deepspeed_stage "${DEEPSPEED_STAGE}"
     --per_device_train_batch_size "${PER_DEVICE_BATCH_SIZE}"
     --num_mini_batches "${NUM_MINI_BATCHES}"
@@ -270,7 +323,9 @@ run_ray_and_training() {
     --async_steps "${ASYNC_STEPS}"
     --seed "${SEED}"
     --local_eval_every "${LOCAL_EVAL_EVERY}"
+    --eval_on_step_0
     --save_freq "${SAVE_FREQ}"
+    --keep_last_n_checkpoints "${KEEP_LAST_N_CHECKPOINTS}"
     --checkpoint_state_freq "${CHECKPOINT_STATE_FREQ}"
     --checkpoint_state_dir "${CHECKPOINT_STATE_DIR}"
     --output_dir "${OUTPUT_DIR}"
@@ -306,6 +361,8 @@ main() {
   setup_vllm_env
   log "Building num learners list (${SLURM_NNODES:-1} nodes)"
   build_num_learners_list
+  log "IFEval reward shaping: ${IFEVAL_REWARD_SHAPING}"
+  log "IFEval shaping curriculum: ${IFEVAL_REWARD_SHAPING_CURRICULUM} (c0=${IFEVAL_COMPETENCE_C0}, alpha=${IFEVAL_COMPETENCE_ALPHA}), num curriculum steps=${IFEVAL_NUM_CURRICULUM_STEPS}"
   log "Running Ray + training (srun)"
   run_ray_and_training
 }
