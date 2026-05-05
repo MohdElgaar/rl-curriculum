@@ -54,7 +54,13 @@ if ! uv sync --frozen; then
   uv sync --prerelease=allow
 fi
 
-# --- Training env (9B, 6 learners, 2 vLLM engines, lr 5e-7, no shaping) ---
+# `uv run` normally re-validates/syncs deps; workspace git sources (transformers/main, OLMo-core)
+# can re-fetch and stall cloud smoke right as training starts—skip sync once the venv is installed.
+export UV_NO_SYNC=1
+
+# --- Training env (9B, 8 GPUs: 6 learners + 2 vLLM engines, lr 5e-7, no shaping).
+# PER_DEVICE_BATCH_SIZE=1 matches SLURM if_rlvr defaults & autotune batch ladder start; safe on A100 40GB
+# for 9B (autotune on Unity uses 6-GPU jobs → 4 learner GPUs after a 2-engine reserve; layout differs from this 8-GPU smoke).
 export MODEL_NAME="Qwen/Qwen3.5-9B"
 export TRAIN_SPLIT="train"
 export TRAIN_DATASET="allenai/IF_multi_constraints_upto5"
@@ -105,11 +111,11 @@ export VLLM_DISABLE_COMPILE_CACHE=1
 export VLLM_USE_V1=1
 export RAY_ENABLE_UV_RUN_RUNTIME_ENV=0
 
-log "Starting training (timeout ${SMOKE_TIMEOUT:-30m})"
+log "Starting training (timeout ${SMOKE_TIMEOUT:-90m})"
 log "WANDB_PROJECT=${WANDB_PROJECT:-<unset>} entity=${WANDB_ENTITY:-<unset>}"
 
 set +e
-timeout "${SMOKE_TIMEOUT:-30m}" bash scripts/train_if_rlvr.sh
+timeout "${SMOKE_TIMEOUT:-90m}" bash scripts/train_if_rlvr.sh
 rc=$?
 set -e
 
