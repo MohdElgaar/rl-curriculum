@@ -44,12 +44,9 @@ else
 fi
 cd rl-curriculum
 
-# Parent commit may switch submodule gitlink — drop old tree before (re)init.
-rm -rf open-instruct
-
 log "Initializing submodule open-instruct"
-if ! git submodule update --init --depth 1 open-instruct 2>/dev/null; then
-  log "Submodule shallow init failed; using fresh shallow clone of mohdelgaar branch"
+if ! GIT_TERMINAL_PROMPT=0 git submodule update --init open-instruct; then
+  log "Submodule init failed; using shallow clone of mohdelgaar branch (may lack train_if_rlvr CLI flags)"
   rm -rf open-instruct
   OI_URL="${OPEN_INSTRUCT_REPO_URL:-https://github.com/MohdElgaar/open-instruct.git}"
   git clone --depth 1 --branch mohdelgaar "${OI_URL}" open-instruct
