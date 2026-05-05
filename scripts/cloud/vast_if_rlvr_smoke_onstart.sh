@@ -44,6 +44,10 @@ else
 fi
 cd rl-curriculum
 
+# Recycled instances may keep /workspace; drop any stale open-instruct before submodule init
+# (e.g. an old mohdelgaar tip clone mismatches the parent's gitlink and grpo_fast CLI).
+rm -rf open-instruct
+
 log "Initializing submodule open-instruct"
 if ! GIT_TERMINAL_PROMPT=0 git submodule update --init open-instruct; then
   log "Submodule init failed; using shallow clone of mohdelgaar branch (may lack train_if_rlvr CLI flags)"
