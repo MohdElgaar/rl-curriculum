@@ -73,6 +73,8 @@ def main() -> None:
         str(output_dir),
         "--max_shard_size",
         "5GB",
+        "--tag",
+        tag,
     ]
     if args.safe_serialization:
         cmd.append("--safe_serialization")
@@ -96,4 +98,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
