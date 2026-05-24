@@ -16,7 +16,25 @@ export PATH="${PROJECT_ROOT}/${UV_PROJECT_ENVIRONMENT}/bin:${PATH}"
 export VLLM_ALLOW_INSECURE_SERIALIZATION VLLM_DISABLE_COMPILE_CACHE VLLM_USE_V1
 export NCCL_CUMEM_ENABLE TRITON_CACHE_DIR PYTHONUNBUFFERED=1
 
-RAY_HEAD_IP="${SLURM_STEPMGR}"
+# Slurm sets SLURM_STEPMGR for typical srun steps. Interactive allocations and
+# nested `srun --jobid=...` often omit it; use the first host in the job nodelist.
+resolve_ray_head_host() {
+  if [ -n "${SLURM_STEPMGR:-}" ]; then
+    echo "${SLURM_STEPMGR}"
+    return 0
+  fi
+  local nodelist="${SLURM_JOB_NODELIST:-${SLURM_NODELIST:-}}"
+  if [ -z "${nodelist}" ] && [ -n "${SLURM_JOB_ID:-}" ]; then
+    nodelist="$(scontrol -o show job "${SLURM_JOB_ID}" | sed -n 's/.*NodeList=\([^ ]*\).*/\1/p')"
+  fi
+  if [ -n "${nodelist}" ]; then
+    scontrol show hostnames "${nodelist}" | head -1
+    return 0
+  fi
+  hostname
+}
+
+RAY_HEAD_IP="$(resolve_ray_head_host)"
 RAY_ADDRESS="${RAY_HEAD_IP}:${RAY_HEAD_PORT}"
 export RAY_ADDRESS
 

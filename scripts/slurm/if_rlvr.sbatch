@@ -4,9 +4,8 @@
 #SBATCH --gpus=8
 #SBATCH --constraint="mpi&a100-80g"
 #SBATCH --cpus-per-gpu=10
-#SBATCH --mem=100G
+#SBATCH --mem=200G
 #SBATCH --time=48:00:00
-#SBATCH --requeue
 #SBATCH --output=logs/%x-%j.out
 #SBATCH --error=logs/%x-%j.err
 
@@ -240,8 +239,66 @@ setup_paths() {
   mkdir -p "${DATASET_LOCAL_CACHE_DIR}" "${TRITON_CACHE_DIR}" "${OUTPUT_DIR}"
 }
 
+# huggingface_hub uses HF_TOKEN or the file at HF_TOKEN_PATH (see `hf env`). Batch jobs do not
+# source interactive login rc files, so point at a saved token if one exists.
+setup_hf_hub_auth() {
+  if [ -n "${HF_TOKEN:-}" ]; then
+    log "HF Hub auth: HF_TOKEN is set"
+    export HF_TOKEN
+    return 0
+  fi
+  local token_path=""
+  if [ -n "${HF_TOKEN_PATH:-}" ] && [ -f "${HF_TOKEN_PATH}" ]; then
+    token_path="${HF_TOKEN_PATH}"
+  elif [ -f "${HOME}/.cache/huggingface/token" ]; then
+    token_path="${HOME}/.cache/huggingface/token"
+  elif [ -f "${PROJECT_ROOT}/../.cache/huggingface/token" ]; then
+    token_path="${PROJECT_ROOT}/../.cache/huggingface/token"
+  elif [ -n "${WORK:-}" ] && [ -f "${WORK}/.cache/huggingface/token" ]; then
+    token_path="${WORK}/.cache/huggingface/token"
+  fi
+  if [ -n "${token_path}" ]; then
+    export HF_TOKEN_PATH="${token_path}"
+    log "HF Hub auth: using HF_TOKEN_PATH=${HF_TOKEN_PATH}"
+    return 0
+  fi
+  log "WARNING: No Hugging Face token found (HF_TOKEN / HF_TOKEN_PATH / ~/.cache/huggingface/token / repo-sibling .cache). Hub whoami and gated assets may fail."
+}
+
 setup_vllm_env() {
   export VLLM_ALLOW_INSECURE_SERIALIZATION VLLM_DISABLE_COMPILE_CACHE VLLM_USE_V1 NCCL_CUMEM_ENABLE TRITON_CACHE_DIR
+  if [ "${IS_ARM_ARCH}" = "1" ]; then
+    # GH200 nodes use ibs2 (10.150.170.x) for IB/RoCE; ^lo,docker0 can pick wrong NIC.
+    export NCCL_SOCKET_IFNAME="${NCCL_SOCKET_IFNAME:-ibs2}"
+    export NCCL_IB_DISABLE="${NCCL_IB_DISABLE:-0}"
+    export TORCH_NCCL_ASYNC_ERROR_HANDLING="${TORCH_NCCL_ASYNC_ERROR_HANDLING:-1}"
+  fi
+}
+
+# Count hosts in a SLURM Nodes= value (e.g. arm-gpu[001-002] -> 2, arm-gpu001 -> 1).
+slurm_nodespec_count() {
+  local spec="$1"
+  if [[ "${spec}" =~ \[([^\]]+)\] ]]; then
+    local inner="${BASH_REMATCH[1]}"
+    local total=0 part start end
+    IFS=',' read -ra parts <<< "${inner}"
+    for part in "${parts[@]}"; do
+      if [[ "${part}" =~ ^([0-9]+)-([0-9]+)$ ]]; then
+        start="${BASH_REMATCH[1]}"
+        end="${BASH_REMATCH[2]}"
+        total=$((total + (10#${end}) - (10#${start}) + 1))
+      else
+        total=$((total + 1))
+      fi
+    done
+    echo "${total}"
+  elif [[ "${spec}" == *','* ]]; then
+    local -a hosts=()
+    IFS=',' read -ra hosts <<< "${spec}"
+    echo "${#hosts[@]}"
+  else
+    echo 1
+  fi
 }
 
 build_num_learners_list() {
@@ -252,18 +309,28 @@ build_num_learners_list() {
 
   local -a gpus_per_node=()
 
-  local scontrol_out
-  scontrol_out="$(scontrol -d show job "$SLURM_JOB_ID")"
+  if [[ -n "${SLURM_JOB_ID:-}" ]] && scontrol_out="$(scontrol -d show job "${SLURM_JOB_ID}" 2>/dev/null)"; then
+    local node gpus node_count i
+    while IFS= read -r line; do
+      node=$(echo "$line" | sed -n -E 's/.*Nodes=([^[:space:]]+).*/\1/p')
+      gpus=$(echo "$line" | sed -n -E 's/.*GRES=[^:]+:[^:]+:([0-9]+).*/\1/p')
+      if [[ -n "${node}" && -n "${gpus}" ]]; then
+        node_count="$(slurm_nodespec_count "${node}")"
+        for ((i = 0; i < node_count; i++)); do
+          gpus_per_node+=("${gpus}")
+        done
+      fi
+    done < <(echo "${scontrol_out}" | grep -E '^\s*Nodes=')
+  fi
 
-  local gpus_per_node=()
-  while IFS= read -r line; do
-    node=$(echo "$line" | sed -n -E 's/.*Nodes=([^[:space:]]+).*/\1/p')
-    gpus=$(echo "$line" | sed -n -E 's/.*GRES=[^:]+:[^:]+:([0-9]+).*/\1/p')
-    if [[ -n "$node" && -n "$gpus" ]]; then
-      gpus_per_node+=("$gpus")
-    fi
-  done < <(echo "$scontrol_out" | grep -E "^\s*Nodes=")
-  log "Detected per-node GPU allocation: ${gpus_per_node[@]}"
+  if [[ ${#gpus_per_node[@]} -eq 0 && -n "${SLURM_NNODES:-}" && -n "${SLURM_GPUS_ON_NODE:-}" ]]; then
+    local i
+    for ((i = 0; i < SLURM_NNODES; i++)); do
+      gpus_per_node+=("${SLURM_GPUS_ON_NODE}")
+    done
+  fi
+
+  log "Detected per-node GPU allocation: ${gpus_per_node[*]}"
 
   local -a learner_per_node=("${gpus_per_node[@]}")
   local vllm_gpus=$((${VLLM_NUM_ENGINES:-0} * ${VLLM_TP:-1}))
@@ -297,7 +364,7 @@ run_ray_and_training() {
   export PROJECT_ROOT RAY_HEAD_PORT RAY_DASHBOARD_PORT
 
   log "Preflight: per-node GPU allocation (SLURM_GPUS_ON_NODE)"
-  srun -n "${SLURM_NNODES}" --ntasks-per-node=1 bash -c 'echo "  $(hostname): gpus on node=$SLURM_GPUS_ON_NODE"'
+  srun -n "${SLURM_NNODES:-1}" --ntasks-per-node=1 bash -c 'echo "  $(hostname): gpus on node=$SLURM_GPUS_ON_NODE"'
 
   # Build training args for rank 0
   local -a train_args=(
@@ -340,7 +407,6 @@ run_ray_and_training() {
     --gsm_competence_c0 "${GSM_COMPETENCE_C0}"
     --gsm_competence_alpha "${GSM_COMPETENCE_ALPHA}"
     --gsm_num_curriculum_steps "${GSM_NUM_CURRICULUM_STEPS}"
-    --deepspeed_stage "${DEEPSPEED_STAGE}"
     --per_device_train_batch_size "${PER_DEVICE_BATCH_SIZE}"
     --num_mini_batches "${NUM_MINI_BATCHES}"
     --num_learners_per_node ${NUM_LEARNERS_LIST}
@@ -370,11 +436,27 @@ run_ray_and_training() {
     read -r -a extra_arr <<< "${ADDITIONAL_ARGS}"
     train_args+=("${extra_arr[@]}")
   fi
+  if [ -n "${ATTN_IMPLEMENTATION:-}" ]; then
+    train_args+=(--attn_implementation "${ATTN_IMPLEMENTATION}")
+  elif [ "${IS_ARM_ARCH}" = "1" ]; then
+    train_args+=(--attn_implementation torch)
+  fi
+  if [ -n "${VLLM_ATTENTION_BACKEND:-}" ]; then
+    train_args+=(--vllm_attention_backend "${VLLM_ATTENTION_BACKEND}")
+  elif [ "${IS_ARM_ARCH}" = "1" ]; then
+    # FLASHINFER JIT fails on GH200 aarch64; use FA2 (installed via pyproject on aarch64).
+    train_args+=(--vllm_enforce_eager --vllm_attention_backend FLASH_ATTN --deepspeed_offload_param True)
+  fi
   if [ "${IS_ARM_ARCH}" = "1" ]; then
-    train_args+=(--attn_implementation sdpa --single_gpu_mode --vllm_enforce_eager --vllm_gpu_memory_utilization 0.3)
+    train_args+=(--deepspeed_stage 3)
+  else
+    train_args+=(--deepspeed_stage "${DEEPSPEED_STAGE}")
+  fi
+  if [ "${NUM_GPUS}" -eq 1 ]; then
+    train_args+=(--single_gpu_mode --vllm_gpu_memory_utilization 0.3)
   fi
 
-  srun -n "${SLURM_NNODES}" --ntasks-per-node=1 "${PROJECT_ROOT}/scripts/slurm/if_rlvr_ray_node.sh" "${train_args[@]}"
+  srun -n "${SLURM_NNODES:-1}" --ntasks-per-node=1 "${PROJECT_ROOT}/scripts/slurm/if_rlvr_ray_node.sh" "${train_args[@]}"
 }
 
 # -----------------------------------------------------------------------------
@@ -385,6 +467,7 @@ main() {
   setup_modules
   log "Setting up paths"
   setup_paths
+  setup_hf_hub_auth
   log "Setting up vllm environment"
   setup_vllm_env
   log "Building num learners list (${SLURM_NNODES:-1} nodes)"

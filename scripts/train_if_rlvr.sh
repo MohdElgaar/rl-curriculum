@@ -159,6 +159,15 @@ echo "Project root: ${PROJECT_ROOT}"
 echo ""
 
 export RAY_ENABLE_UV_RUN_RUNTIME_ENV=0
+
+optional_attn=()
+if [ -n "${ATTN_IMPLEMENTATION:-}" ]; then
+    optional_attn+=(--attn_implementation "${ATTN_IMPLEMENTATION}")
+fi
+if [ -n "${VLLM_ATTENTION_BACKEND:-}" ]; then
+    optional_attn+=(--vllm_attention_backend "${VLLM_ATTENTION_BACKEND}")
+fi
+
 uv run python -m open_instruct.grpo_fast \
     --exp_name "${EXP_NAME}" \
     --beta ${BETA} \
@@ -205,9 +214,8 @@ uv run python -m open_instruct.grpo_fast \
     --inflight_updates True \
     --code_pass_rate_reward_threshold 0.99 \
     --eval_on_step_0 \
-    --output_dir "${OUTPUT_DIR}"
-
-echo ""
+    --output_dir "${OUTPUT_DIR}" \
+    "${optional_attn[@]}"
 echo "============================================"
 echo "Training completed!"
 echo "Results saved to: ${OUTPUT_DIR}"

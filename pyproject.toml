@@ -18,7 +18,6 @@ environments = [
     "sys_platform == 'linux' and platform_machine == 'aarch64'",
     "sys_platform == 'darwin'",
 ]
-override-dependencies = ["transformers>=5.2"]
 
 [tool.uv.workspace]
 members = ["open-instruct"]
