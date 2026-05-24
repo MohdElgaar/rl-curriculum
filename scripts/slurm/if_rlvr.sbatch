@@ -134,10 +134,10 @@ fi
 : "${HF_HOME:=${SCRATCH_ROOT}/cache/huggingface}"
 OUTPUT_DIR_DEFAULT="${SCRATCH_ROOT}/outputs"
 : "${OUTPUT_DIR:=${OUTPUT_DIR_DEFAULT}}"
+: "${PUSH_TO_HUB:=False}"
 
 : "${EXP_NAME:=valpy_if_multi_tulu3.1_8b_grpo}"
 : "${MODEL_NAME:=allenai/Llama-3.1-Tulu-3-8B-DPO}"
-: "${CHAT_TEMPLATE_NAME:=tulu}"
 
 : "${TRAIN_DATASET:=allenai/IF_multi_constraints_upto5}"
 : "${TRAIN_SPLIT:=train}"
@@ -150,6 +150,7 @@ OUTPUT_DIR_DEFAULT="${SCRATCH_ROOT}/outputs"
 : "${LEARNING_RATE:=5e-7}"
 : "${TEMPERATURE:=1.0}"
 : "${TOTAL_EPISODES:=2000000}"
+: "${NUM_TRAINING_STEPS:=1000}"
 
 : "${NUM_UNIQUE_PROMPTS:=48}"
 : "${NUM_SAMPLES_PER_PROMPT:=16}"
@@ -193,8 +194,6 @@ OUTPUT_DIR_DEFAULT="${SCRATCH_ROOT}/outputs"
 : "${APPLY_VERIFIABLE_REWARD:=True}"
 : "${NON_STOP_PENALTY:=True}"
 : "${NON_STOP_PENALTY_VALUE:=0.0}"
-: "${OE_EVAL_TASKS:=ifeval::tulu}"
-: "${OE_EVAL_MAX_LENGTH:=2048}"
 
 : "${VLLM_NUM_ENGINES:=2}"
 : "${VLLM_TP:=1}"
@@ -389,6 +388,7 @@ run_ray_and_training() {
     --non_stop_penalty_value "${NON_STOP_PENALTY_VALUE}"
     --temperature "${TEMPERATURE}"
     --total_episodes "${TOTAL_EPISODES}"
+    --num_training_steps "${NUM_TRAINING_STEPS}"
     --ifeval_reward_shaping "${IFEVAL_REWARD_SHAPING}"
     --ifeval_reward_shaping_curriculum "${IFEVAL_REWARD_SHAPING_CURRICULUM}"
     --ifeval_random_zero_reward "${IFEVAL_RANDOM_ZERO_REWARD}"
@@ -423,6 +423,7 @@ run_ray_and_training() {
     --checkpoint_state_freq "${CHECKPOINT_STATE_FREQ}"
     --checkpoint_state_dir "${CHECKPOINT_STATE_DIR}"
     --output_dir "${OUTPUT_DIR}"
+    --push_to_hub "${PUSH_TO_HUB}"
     --inflight_updates True
     --code_pass_rate_reward_threshold 0.99
     --with_tracking
