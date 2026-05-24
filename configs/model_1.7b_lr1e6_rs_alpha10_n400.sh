@@ -35,7 +35,7 @@ export ASYNC_STEPS=1
 # Batch Configuration
 # ============================================================================
 
-export PER_DEVICE_BATCH_SIZE=1
+export PER_DEVICE_BATCH_SIZE=4
 export NUM_UNIQUE_PROMPTS=48
 export NUM_SAMPLES_PER_PROMPT=16
 export NUM_MINI_BATCHES=2
