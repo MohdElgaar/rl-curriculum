@@ -512,6 +512,14 @@ def build_train_command(spec: RunSpec, run_dir: pathlib.Path, project_root: path
     if env_bool("GRADIENT_CHECKPOINTING", True):
         cmd.append("--gradient_checkpointing")
 
+    attn_impl = env("ATTN_IMPLEMENTATION")
+    if attn_impl:
+        cmd.extend(["--attn_implementation", attn_impl])
+
+    vllm_attn = env("VLLM_ATTENTION_BACKEND")
+    if vllm_attn:
+        cmd.extend(["--vllm_attention_backend", vllm_attn])
+
     return cmd
 
 

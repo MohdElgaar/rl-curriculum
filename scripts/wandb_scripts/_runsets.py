@@ -6,7 +6,7 @@ The report (``build_wandb_comparison_report.py``) and the plot scripts
 different numbers for "the same experiment". This module centralises:
 
 - model paths and display names
-- learning-rate pin
+- learning-rate pin (default ``1e-6``; Qwen3.5-9B and Gemma-4-E2B IF-RLVR use ``5e-7`` — see ``learning_rate_for_model_path``)
 - dataset identifiers (mongo, wandb_workspaces expression, and config prefix)
 - shaping-arm definitions (baseline, baseline with random-zero reward, shaping only,
   curriculum α∈{1,10})
@@ -33,12 +33,39 @@ LR_VALUE: float = 1e-6
 MODEL_NAME_OR_PATH: dict[str, str] = {
     "1.7B": "Qwen/Qwen3-1.7B",
     "0.6B": "Qwen/Qwen3-0.6B",
+    "9B": "Qwen/Qwen3.5-9B",
+    "E2B": "google/gemma-4-E2B-it",
 }
 
 MODEL_DISPLAY: dict[str, str] = {
     "1.7B": "Qwen3-1.7B",
     "0.6B": "Qwen3-0.6B",
+    "9B": "Qwen3.5-9B",
+    "E2B": "Gemma-4-E2B-it",
 }
+
+
+def learning_rate_for_model_path(model_path: str) -> float:
+    """Training LR pinned in W&B filters (9B / Gemma-4-E2B IF-RLVR @ 5e-7; smaller Qwen3 @ 1e-6)."""
+    if model_path in ("Qwen/Qwen3.5-9B", "google/gemma-4-E2B-it"):
+        return 5e-7
+    return LR_VALUE
+
+
+def model_lr_filter_mongo(model_paths: list[str]) -> dict[str, Any]:
+    """``$and`` of learning_rate + model_name_or_path, or ``$or`` when paths use different LRs."""
+    buckets: dict[float, list[str]] = {}
+    for mp in model_paths:
+        lr = learning_rate_for_model_path(mp)
+        buckets.setdefault(lr, []).append(mp)
+    if len(buckets) == 1:
+        lr = next(iter(buckets))
+        paths = buckets[lr]
+        return {"$and": [{"config.learning_rate": lr}, {"config.model_name_or_path": {"$in": paths}}]}
+    or_clauses: list[dict[str, Any]] = []
+    for lr, paths in buckets.items():
+        or_clauses.append({"$and": [{"config.learning_rate": lr}, {"config.model_name_or_path": {"$in": paths}}]})
+    return {"$or": or_clauses}
 
 
 @dataclass(frozen=True)
@@ -320,8 +347,7 @@ def dataset_filter_mongo(
     arms = approach_mongo(dataset.prefix, approach_kind) if approach_kind else shaping_arms_mongo(dataset.prefix)
     return {
         "$and": [
-            {"config.learning_rate": LR_VALUE},
-            {"config.model_name_or_path": {"$in": model_paths}},
+            model_lr_filter_mongo(model_paths),
             dataset.mongo_clause,
             arms,
             excluded_run_tags_mongo(),
@@ -382,9 +408,10 @@ def runset_filter_expr(
     *,
     approach_kind: str | None = None,
 ) -> str:
+    lr = learning_rate_for_model_path(model_path)
     parts = [
         f"Config('model_name_or_path') == '{model_path}'",
-        f"Config('learning_rate') == {LR_VALUE}",
+        f"Config('learning_rate') == {lr}",
     ]
     parts.append(f"({dataset.expr_clause})")
     parts.append(approach_expr(dataset.prefix, approach_kind) if approach_kind else shaping_arms_expr(dataset.prefix))
