@@ -95,7 +95,7 @@ export SEED=1
 # Save checkpoint every N episodes
 export SAVE_FREQ=-1
 export CHECKPOINT_STATE_FREQ=1
-export KEEP_LAST_N_CHECKPOINTS=-1
+export KEEP_LAST_N_CHECKPOINTS=1
 
 # Run local evaluation every N episodes
 export LOCAL_EVAL_EVERY=10

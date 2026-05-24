@@ -1,17 +1,16 @@
 #!/bin/bash
 #
 # Usage:
-#   source configs/model_1.7b_lr1e6_reward_shaping.sh
-#   source configs/gpus_2.sh   # or configs/gpus_8.sh
+#   source configs/model_1.7b_lr1e6_rs_alpha10_n800.sh
+#   source configs/gpus_4.sh
 #
-# This matches the default 1.7B / 1e-6 setup, but enables partial credit for
-# numeric/cardinality-style IFEval constraints.
+# Same as model_1.7b_lr1e6_rs_alpha10.sh with IFEVAL_NUM_CURRICULUM_STEPS=800.
 
 # ============================================================================
 # Model Configuration
 # ============================================================================
 
-export MODEL_NAME="Qwen/Qwen3-0.6B"
+export MODEL_NAME="Qwen/Qwen3-1.7B"
 
 # ============================================================================
 # Dataset Configuration
@@ -36,7 +35,7 @@ export ASYNC_STEPS=1
 # Batch Configuration
 # ============================================================================
 
-export PER_DEVICE_BATCH_SIZE=8
+export PER_DEVICE_BATCH_SIZE=1
 export NUM_UNIQUE_PROMPTS=48
 export NUM_SAMPLES_PER_PROMPT=16
 export NUM_MINI_BATCHES=2
@@ -53,7 +52,7 @@ export PACK_LENGTH=4096
 # Training Schedule
 # ============================================================================
 
-export SEED=3
+export SEED=1
 export SAVE_FREQ=-1
 export CHECKPOINT_STATE_FREQ=25
 export KEEP_LAST_N_CHECKPOINTS=1
@@ -67,8 +66,8 @@ export GROUND_TRUTHS_KEY="ground_truth"
 export IFEVAL_REWARD_SHAPING=True
 export IFEVAL_REWARD_SHAPING_CURRICULUM=True
 export IFEVAL_COMPETENCE_C0=0.1
-export IFEVAL_COMPETENCE_ALPHA=1.0
-export IFEVAL_NUM_CURRICULUM_STEPS=200
+export IFEVAL_COMPETENCE_ALPHA=10.0
+export IFEVAL_NUM_CURRICULUM_STEPS=800
 
 # ============================================================================
 # Experiment Identification
@@ -76,4 +75,4 @@ export IFEVAL_NUM_CURRICULUM_STEPS=200
 
 DATASET_BASENAME=$(basename "${TRAIN_DATASET}" .jsonl)
 MODEL_BASENAME=$(basename "${MODEL_NAME}")
-export EXP_NAME="${MODEL_BASENAME}_${DATASET_BASENAME}_${LEARNING_RATE}_alpha${IFEVAL_COMPETENCE_ALPHA}_n${IFEVAL_NUM_CURRICULUM_STEPS}_seed${SEED}"  # separate OUTPUT_DIR per seed
+export EXP_NAME="${MODEL_BASENAME}_${DATASET_BASENAME}_${LEARNING_RATE}_alpha${IFEVAL_COMPETENCE_ALPHA}_n${IFEVAL_NUM_CURRICULUM_STEPS}"
