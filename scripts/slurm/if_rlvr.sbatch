@@ -446,10 +446,12 @@ run_ray_and_training() {
     train_args+=(--vllm_attention_backend "${VLLM_ATTENTION_BACKEND}")
   elif [ "${IS_ARM_ARCH}" = "1" ]; then
     # FLASHINFER JIT fails on GH200 aarch64; use FA2 (installed via pyproject on aarch64).
-    train_args+=(--vllm_enforce_eager --vllm_attention_backend FLASH_ATTN --deepspeed_offload_param True)
+    train_args+=(--vllm_enforce_eager --vllm_attention_backend FLASH_ATTN)
+    # train_args+=(--vllm_gdn_prefill_backend "${VLLM_GDN_PREFILL_BACKEND:-triton}")
   fi
   if [ "${IS_ARM_ARCH}" = "1" ]; then
-    train_args+=(--deepspeed_stage 3)
+    # train_args+=(--deepspeed_stage 3 --deepspeed_offload_param True --deepspeed_offload_optimizer True)
+    train_args+=(--deepspeed_stage 2)
   else
     train_args+=(--deepspeed_stage "${DEEPSPEED_STAGE}")
   fi
