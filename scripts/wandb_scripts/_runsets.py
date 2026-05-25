@@ -44,6 +44,26 @@ MODEL_DISPLAY: dict[str, str] = {
     "E2B": "Gemma-4-E2B-it",
 }
 
+# Monotonic size order for bar-chart columns (do not use str.rstrip("B") — "E2B" → "E2").
+MODEL_SORT_KEY: dict[str, float] = {
+    "0.6B": 0.6,
+    "1.7B": 1.7,
+    "E2B": 2.0,
+    "9B": 9.0,
+}
+
+
+def model_sort_key(model_key: str) -> float:
+    """Numeric sort key for ``MODEL_NAME_OR_PATH`` keys and unknown slugs."""
+    if model_key in MODEL_SORT_KEY:
+        return MODEL_SORT_KEY[model_key]
+    if model_key.endswith("B"):
+        try:
+            return float(model_key[:-1])
+        except ValueError:
+            pass
+    return float("inf")
+
 
 def learning_rate_for_model_path(model_path: str) -> float:
     """Training LR pinned in W&B filters (9B / Gemma-4-E2B IF-RLVR @ 5e-7; smaller Qwen3 @ 1e-6)."""

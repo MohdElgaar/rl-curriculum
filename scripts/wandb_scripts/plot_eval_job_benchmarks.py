@@ -61,6 +61,7 @@ from _runsets import (  # noqa: E402
     MODEL_DISPLAY,
     MODEL_NAME_OR_PATH,
     DatasetSpec,
+    model_sort_key,
     classify_run_kind,
     excluded_run_tags_mongo,
     shaping_arms_mongo,
@@ -166,7 +167,7 @@ def is_base_model_eval_cfg(cfg: dict[str, Any]) -> bool:
 def ordered_model_keys(seen: set[str]) -> list[str]:
     ranked = sorted(
         (k for k in seen if k in MODEL_NAME_OR_PATH),
-        key=lambda k: float(k.rstrip("B")),
+        key=model_sort_key,
     )
     rest = sorted(k for k in seen if k not in MODEL_NAME_OR_PATH)
     return ranked + rest
