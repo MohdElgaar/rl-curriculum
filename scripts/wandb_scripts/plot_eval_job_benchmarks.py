@@ -81,12 +81,12 @@ DEFAULT_METRICS: tuple[str, ...] = (
 )
 
 METRIC_SHORT_LABELS: dict[str, str] = {
-    "mbpp_plus_instruct/pass_at_1,extract_code": "MBPP+ instruct",
-    "mbpp_instruct/pass_at_1,extract_code": "MBPP instruct",
-    "ifeval/prompt_level_loose_acc": "IFEval (loose)",
-    "ifbench/prompt_level_loose_acc,pass_at_1_repeats": "IFBench (loose)",
-    "humaneval_plus_instruct/pass@1,create_test": "HE+ instruct",
-    "humaneval_instruct/pass@1,create_test": "HumanEval instruct",
+    "mbpp_plus_instruct/pass_at_1,extract_code": "MBPP+",
+    "mbpp_instruct/pass_at_1,extract_code": "MBPP",
+    "ifeval/prompt_level_loose_acc": "IFEval",
+    "ifbench/prompt_level_loose_acc,pass_at_1_repeats": "IFBench",
+    "humaneval_plus_instruct/pass@1,create_test": "HumanEval+",
+    "humaneval_instruct/pass@1,create_test": "HumanEval",
     "hendrycks_math500/exact_match": "MATH-500",
     "aime26/exact_match,keep_repeats": "AIME26",
     "aime25/exact_match,keep_repeats": "AIME25",

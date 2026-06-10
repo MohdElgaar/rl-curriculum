@@ -160,11 +160,15 @@ def resolve_dataset(name: str) -> DatasetSpec:
 
 # ----- Shaping-arm taxonomy ------------------------------------------------
 
+# Competence α values used in curriculum ablations (see ``plot_curriculum_alpha_two_models.py``).
+CURRICULUM_ALPHAS: tuple[float, ...] = (0.1, 1.0, 10.0)
+
 # CLI / label / mnemonic for each approach arm the report compares.
 APPROACH_KINDS: tuple[tuple[str, str], ...] = (
     ("Baseline", "baseline"),
     ("Baseline (random-zero)", "baseline_rz"),
     ("Shaping only", "shaping"),
+    (r"Curriculum ($\alpha{=}0.1$)", "curr_a0.1"),
     (r"Curriculum ($\alpha{=}1$)", "curr_a1"),
     (r"Curriculum ($\alpha{=}10$)", "curr_a10"),
 )
@@ -176,6 +180,7 @@ APPROACH_PLAIN_LABELS: dict[str, str] = {
     "baseline": "Baseline",
     "baseline_rz": "Baseline (random-zero)",
     "shaping": "Shaping only",
+    "curr_a0.1": "Curriculum (alpha=0.1)",
     "curr_a1": "Curriculum (alpha=1)",
     "curr_a10": "Curriculum (alpha=10)",
 }
@@ -184,6 +189,7 @@ APPROACH_TEX_LABELS: dict[str, str] = {
     "baseline": "Baseline",
     "baseline_rz": "Baseline (random-zero)",
     "shaping": "Shaping only",
+    "curr_a0.1": r"Curriculum ($\alpha{=}0.1$)",
     "curr_a1": r"Curriculum ($\alpha{=}1$)",
     "curr_a10": r"Curriculum ($\alpha{=}10$)",
 }
@@ -229,12 +235,16 @@ def _coerce_alpha(cfg: dict[str, Any], prefix: str) -> float | None:
         return None
 
 
+def _alpha_matches(alpha: float | None, target: float) -> bool:
+    return alpha is not None and abs(alpha - target) < 1e-9
+
+
 def classify_run_kind(cfg: dict[str, Any], prefix: str) -> str | None:
-    """Return the approach kind ("baseline"/"baseline_rz"/"shaping"/"curr_a1"/"curr_a10").
+    """Return the approach kind (baseline / shaping / curr_a* / …).
 
     ``baseline_rz`` is baseline training with ``{prefix}_random_zero_reward`` enabled.
     Returns ``None`` for runs that do not match any approved arm
-    (e.g. shaping+curriculum with an alpha other than 1 or 10).
+    (e.g. shaping+curriculum with an alpha outside ``CURRICULUM_ALPHAS``).
     """
     cfg = _flat_config(cfg)
     rs = _coerce_bool(cfg.get(f"{prefix}_reward_shaping", False))
@@ -247,9 +257,11 @@ def classify_run_kind(cfg: dict[str, Any], prefix: str) -> str | None:
     if rs and not curr:
         return "shaping"
     if rs and curr:
-        if alpha is not None and abs(alpha - 1.0) < 1e-9:
+        if _alpha_matches(alpha, 0.1):
+            return "curr_a0.1"
+        if _alpha_matches(alpha, 1.0):
             return "curr_a1"
-        if alpha is not None and abs(alpha - 10.0) < 1e-9:
+        if _alpha_matches(alpha, 10.0):
             return "curr_a10"
     return None
 
@@ -294,6 +306,8 @@ def kind_to_group_key(kind: str) -> tuple[bool, bool, float | None, bool]:
         return (False, False, None, True)
     if kind == "shaping":
         return (True, False, None, False)
+    if kind == "curr_a0.1":
+        return (True, True, 0.1, False)
     if kind == "curr_a1":
         return (True, True, 1.0, False)
     if kind == "curr_a10":
@@ -326,11 +340,14 @@ def shaping_arms_mongo(prefix: str) -> dict[str, Any]:
     alpha = f"config.{prefix}_competence_alpha"
     f_rs = _config_eq_false_or_unset_mongo(rs)
     f_curr = _config_eq_false_or_unset_mongo(curr)
+    alpha_values: list[float | int] = []
+    for a in CURRICULUM_ALPHAS:
+        alpha_values.extend([a, int(a)] if float(a).is_integer() else [a])
     return {
         "$or": [
             {"$and": [f_rs, f_curr]},
             {"$and": [{rs: True}, f_curr]},
-            {"$and": [{rs: True}, {curr: True}, {alpha: {"$in": [1, 1.0, 10, 10.0]}}]},
+            {"$and": [{rs: True}, {curr: True}, {alpha: {"$in": alpha_values}}]},
         ]
     }
 
@@ -348,6 +365,8 @@ def approach_mongo(prefix: str, kind: str) -> dict[str, Any]:
         return {"$and": [f_rs, f_curr, {rz: True}]}
     if kind == "shaping":
         return {"$and": [{rs: True}, f_curr]}
+    if kind == "curr_a0.1":
+        return {"$and": [{rs: True}, {curr: True}, {alpha: {"$in": [0.1, 0.10]}}]}
     if kind == "curr_a1":
         return {"$and": [{rs: True}, {curr: True}, {alpha: {"$in": [1, 1.0]}}]}
     if kind == "curr_a10":
@@ -396,6 +415,7 @@ def shaping_arms_expr(prefix: str) -> str:
     return (
         f"(({f_rs}) and ({f_curr})) or "
         f"(({rs} == True) and ({f_curr})) or "
+        f"(({rs} == True) and ({curr} == True) and (({alpha} == 0.1) or ({alpha} == 0.10))) or "
         f"(({rs} == True) and ({curr} == True) and (({alpha} == 1) or ({alpha} == 1.0))) or "
         f"(({rs} == True) and ({curr} == True) and (({alpha} == 10) or ({alpha} == 10.0)))"
     )
@@ -415,6 +435,8 @@ def approach_expr(prefix: str, kind: str) -> str:
         return f"(({f_rs}) and ({f_curr}) and ({rz} == True))"
     if kind == "shaping":
         return f"(({rs} == True) and ({f_curr}))"
+    if kind == "curr_a0.1":
+        return f"(({rs} == True) and ({curr} == True) and (({alpha} == 0.1) or ({alpha} == 0.10)))"
     if kind == "curr_a1":
         return f"(({rs} == True) and ({curr} == True) and (({alpha} == 1) or ({alpha} == 1.0)))"
     if kind == "curr_a10":

@@ -96,10 +96,10 @@ PAPER_GROUP_KEYS: frozenset[str] = frozenset(
 )
 
 PAPER_LEGEND_LABELS: dict[str, str] = {
-    "[false,false,null,false]": "Baseline",
-    "[false,false,null,true]": "Baseline (random-zero)",
-    "[true,false,null,false]": "Shaping only",
-    "[true,true,10.0,false]": r"Curriculum ($\alpha{=}10$)",
+    "[false,false,null,false]": "GRPO",
+    "[false,false,null,true]": "Random Reward",
+    "[true,false,null,false]": "Reward Shaping",
+    "[true,true,10.0,false]": "Curriculum",
 }
 
 
@@ -679,15 +679,16 @@ def filter_paper_groups(plot_df: pd.DataFrame) -> pd.DataFrame:
     return d
 
 
-def compute_speedup_pct_ifbench(
+def compute_paper_speedup_arrow(
     plot_df: pd.DataFrame,
     *,
     metric: str,
-    final_step: float,
-) -> float | None:
+) -> tuple[float, float, float, float] | None:
     """
-    Percent fewer training steps for curriculum (α=10) to first reach the baseline
-    group's mean IFBench reward at ``final_step`` (mean over seeds at each step).
+    Arrow endpoints and speed-up for the paper IFBench panel.
+
+    From baseline's best mean reward (over steps) to the first curriculum step that
+    reaches that level. Returns (baseline_step, curriculum_step, reward_y, speedup_pct).
     """
     sub = plot_df.loc[plot_df["metric"] == metric]
     if sub.empty:
@@ -700,12 +701,15 @@ def compute_speedup_pct_ifbench(
         return None
     b_series = baseline.groupby("step", sort=True)["value"].mean()
     c_series = curr.groupby("step", sort=True)["value"].mean().sort_index()
-    if final_step not in b_series.index:
+    if b_series.empty or c_series.empty:
         return None
-    target = float(b_series.loc[final_step])
+    baseline_best_step = float(b_series.idxmax())
+    target = float(b_series.max())
     for step, val in c_series.items():
         if float(val) >= target:
-            return float((final_step - float(step)) / final_step * 100.0)
+            curriculum_step = float(step)
+            speedup = (baseline_best_step - curriculum_step) / baseline_best_step * 100.0
+            return baseline_best_step, curriculum_step, target, speedup
     return None
 
 
@@ -716,7 +720,7 @@ def plot_paper_ifbench_panel(
     base_name: str,
     *,
     errorbar: str | tuple[str, float] | None,
-    final_step: float,
+    figsize: tuple[float, float] = (3.33, 2.5),
 ) -> None:
     """Single-panel IFBench reward plot with presentation typography and speed-up callout."""
     metric = "eval/objective/ifbench_reward"
@@ -726,7 +730,7 @@ def plot_paper_ifbench_panel(
         raise SystemExit("No rows for paper IFBench panel after filtering.")
 
     df = smooth_plot_data(df, smooth_window)
-    speedup = compute_speedup_pct_ifbench(plot_df, metric=metric, final_step=final_step)
+    arrow_info = compute_paper_speedup_arrow(df, metric=metric)
 
     try:
         plt.style.use("seaborn-v0_8-whitegrid")
@@ -735,11 +739,11 @@ def plot_paper_ifbench_panel(
 
     plt.rcParams.update(
         {
-            "axes.titlesize": 13,
-            "axes.labelsize": 12,
-            "legend.fontsize": 11,
-            "xtick.labelsize": 11,
-            "ytick.labelsize": 11,
+            "axes.titlesize": 9,
+            "axes.labelsize": 8,
+            "legend.fontsize": 6.5,
+            "xtick.labelsize": 7,
+            "ytick.labelsize": 7,
         }
     )
 
@@ -752,48 +756,97 @@ def plot_paper_ifbench_panel(
     cond_order = [PAPER_LEGEND_LABELS[k] for k in gk_order]
     palette = dict(zip(cond_order, ["#4C72B0", "#9467BD", "#DD8452", "#55A868"]))
 
-    fig, ax = plt.subplots(figsize=(7.2, 4.35))
-    sns.lineplot(
-        data=df,
-        x="step",
-        y="value",
-        hue="condition",
-        hue_order=cond_order,
-        palette=palette,
-        ax=ax,
-        legend=False,
-        linewidth=2.8,
-        errorbar=errorbar,
-        **_lineplot_markers_kw(df),
-    )
-    ax.set_title("IFBench reward (aggregated verifier score)", fontweight="semibold", pad=10)
-    ax.set_ylabel("Reward")
-    ax.set_xlabel("Training step")
+    curriculum_label = PAPER_LEGEND_LABELS["[true,true,10.0,false]"]
+    other_labels = [c for c in cond_order if c != curriculum_label]
+
+    fig, ax = plt.subplots(figsize=figsize)
+    df_other = df.loc[df["condition"].isin(other_labels)]
+    if not df_other.empty:
+        sns.lineplot(
+            data=df_other,
+            x="step",
+            y="value",
+            hue="condition",
+            hue_order=other_labels,
+            palette={k: palette[k] for k in other_labels},
+            ax=ax,
+            legend=False,
+            linewidth=1.8,
+            errorbar=errorbar,
+            **_lineplot_markers_kw(df_other),
+        )
+    df_curr = df.loc[df["condition"] == curriculum_label]
+    if not df_curr.empty:
+        sns.lineplot(
+            data=df_curr,
+            x="step",
+            y="value",
+            hue="condition",
+            hue_order=[curriculum_label],
+            palette={curriculum_label: palette[curriculum_label]},
+            ax=ax,
+            legend=False,
+            linewidth=2.8,
+            errorbar=errorbar,
+            **_lineplot_markers_kw(df_curr),
+        )
+    ax.set_ylabel("IFBench Reward")
+    ax.set_xlabel("Step")
     ax.grid(True, alpha=0.45, linestyle=":")
     if _collapsed_to_single_step(df):
         _widen_xlim_if_single_step(ax, df, left_zero=True)
     else:
         ax.set_xlim(left=0)
 
-    handles = [Line2D([0], [0], color=palette[c], lw=2.8, label=c) for c in cond_order]
+    handles = [
+        Line2D(
+            [0],
+            [0],
+            color=palette[c],
+            lw=2.8 if c == curriculum_label else 1.8,
+            label=c,
+        )
+        for c in cond_order
+    ]
     ax.legend(
         handles,
         cond_order,
-        loc="lower right",
+        loc="upper left",
         frameon=True,
         fancybox=False,
         edgecolor="0.82",
+        handlelength=1.0,
+        handletextpad=0.35,
     )
 
-    if speedup is not None:
+    if arrow_info is not None:
+        baseline_step, curriculum_step, reward_y, speedup = arrow_info
         ax.annotate(
-            f"{speedup:.0f}% fewer steps\nto reach baseline\nfinal IFBench reward",
-            xy=(0.03, 0.97),
-            xycoords="axes fraction",
-            ha="left",
-            va="top",
-            fontsize=10.5,
-            bbox=dict(boxstyle="round,pad=0.35", facecolor="white", edgecolor="0.75", alpha=0.95),
+            "",
+            xy=(curriculum_step, reward_y),
+            xytext=(baseline_step, reward_y),
+            arrowprops=dict(
+                arrowstyle="->",
+                color="0.25",
+                lw=2.0,
+                shrinkA=0,
+                shrinkB=0,
+            ),
+            annotation_clip=False,
+        )
+        span = baseline_step - curriculum_step
+        text_x = 0.5 * (baseline_step + curriculum_step) + 0.12 * span
+        y_lo, y_hi = ax.get_ylim()
+        text_y = reward_y + 0.04 * (y_hi - y_lo)
+        ax.text(
+            text_x,
+            text_y,
+            f"{speedup:.0f}% fewer steps",
+            ha="center",
+            va="bottom",
+            fontsize=7,
+            fontweight="bold",
+            color="0.15",
         )
 
     fig.tight_layout()
@@ -801,8 +854,12 @@ def plot_paper_ifbench_panel(
     fig.savefig(out_pdf, bbox_inches="tight", dpi=300)
     plt.close(fig)
     print(f"Wrote {out_pdf}")
-    if speedup is not None:
-        print(f"Speed-up annotation: {speedup:.1f}% fewer steps (curriculum vs baseline final @ step {final_step:g})")
+    if arrow_info is not None:
+        baseline_step, curriculum_step, _, speedup = arrow_info
+        print(
+            f"Speed-up annotation: {speedup:.1f}% fewer steps "
+            f"(baseline best @ step {baseline_step:g} → curriculum @ {curriculum_step:g})"
+        )
 
 
 # --- main -----------------------------------------------------------------
@@ -996,7 +1053,6 @@ def main() -> None:
             out_dir,
             paper_base,
             errorbar=errorbar,
-            final_step=float(args.paper_final_step),
         )
         return
 
